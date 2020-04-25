@@ -7,10 +7,10 @@ import enum
 # seed random number generator
 seed(time.time())
 
-display_width = 1280
-display_height = 800
+display_width = 850
+display_height = 700
 
-tile_width = 50
+tile_width = 45
 tile_height = 1.6*tile_width
 board_col_nb = 18
 board_row_nb = 9
@@ -18,6 +18,7 @@ board_row_nb = 9
 #board_row_nb = 2 #FOR TESTING
 
 tool_bar_height = 50
+offset_x_grid = (display_width - (board_col_nb*tile_width)) / 2
 
 color_black = (0,0,0)
 color_white = (255,255,255)
@@ -27,6 +28,23 @@ color_green = (119, 237, 131)
 color_blue = (119, 160, 237)
 color_yellow = (237, 215, 119) 
 background = color_white
+
+french_text_map = {
+    "undo" : "Annuler",
+    "restart" : "Rejouer",
+    "you_won" : "Vous avez gagné !! :)",
+    "you_lost" : "Vous avez perdu"
+}
+
+english_text_map = {
+    "undo" : "Undo",
+    "restart" : "Play again",
+    "you_won" : "You won !! :)",
+    "you_lost" : "You lost"
+}
+
+text_map = english_text_map
+#text_map = french_text_map
 
 ##########RAND
 colors_rand_arr = [color_red, color_green, color_blue, color_yellow]
@@ -42,12 +60,14 @@ clock = pygame.time.Clock()
 
 class Tile:
     """ Represents a Tile in space """
-    x_offset = 0
+    x_offset = offset_x_grid
     y_offset = tool_bar_height
     i = 0
     j = 0
     rect = pygame.Rect(0,0,0,0)
     color = color_red
+    speed = 6 # speed when drawing
+    k = 1.05 # acceleration factor
 
     def __init__(self, i, j, color):
         self.i = i
@@ -66,24 +86,32 @@ class Tile:
     def is_in_place(self):
         return self.rect.x == self.i*tile_width and self.rect.y == self.j*tile_height
 
+    def __accelerate(self):
+        self.speed *= self.k
+
+    def __stop_speed(self):
+        self.speed = 6
+
     def fall_to(self, i, j):
         """Draws the tile falling toward (i,j)"""
-        if self.rect.y >= j*tile_height + self.y_offset:
+        if self.rect.y + self.speed >= j*tile_height + self.y_offset:
+            self.__stop_speed()
             return True
         else:
             curr_x = self.rect.x
             curr_y = self.rect.y
-            self.rect = pygame.Rect((curr_x,curr_y + 5),(tile_width, tile_height))
+            self.__accelerate()
+            self.rect = pygame.Rect((curr_x,curr_y + self.speed),(tile_width, tile_height))
             return False
 
     def slide_left_to(self, i, j):
         """Draws the tile sliding left toward (i,j)"""
-        if self.rect.x <= i*tile_width + self.x_offset:
+        if self.rect.x - self.speed <= i*tile_width + self.x_offset:
             return True
         else:
             curr_x = self.rect.x
             curr_y = self.rect.y
-            self.rect = pygame.Rect((curr_x - 5,curr_y),(tile_width, tile_height))
+            self.rect = pygame.Rect((curr_x - self.speed,curr_y),(tile_width, tile_height))
             return False
 
     def  __str__(self):
@@ -110,18 +138,32 @@ class Text_Button:
     rect = pygame.Rect(0,0,0,0)
     btn_render = None
 
+    border_thickness = 2
+    border_color = color_black
+    border_padding = 5
+
     def __init__(self, x, y, text):
-        """ (x,y) are coordinated of center of the button"""
+        """ (x,y) are the coordinates of the button's center"""
         font_btn = pygame.font.SysFont('Comic Sans MS', 30)
         self.btn_render = font_btn.render(text, True, self.text_color, self.background_color)
         width = self.btn_render.get_rect().width
         height = self.btn_render.get_rect().height
-        print ("INNER height "+str(height))
         self.x = x - width / 2
         self.y = y - height / 2
         self.rect = pygame.Rect(self.x,self.y,width,height)
 
+    def __draw_border(self):
+        border_with = self.rect.width + self.border_thickness * 8 + self.border_padding * 2
+        border_height = self.rect.height +  self.border_thickness * 2
+
+        border_rect = pygame.Rect((self.x - self.border_thickness *4 - self.border_padding, self.y - self.border_thickness),(border_with, border_height))
+        mask_rect = pygame.Rect((border_rect.x + self.border_thickness *4, border_rect.y + self.border_thickness),(border_rect.width - self.border_thickness * 8, border_rect.height - self.border_thickness * 2))
+        pygame.draw.rect(gameDisplay, self.border_color, pygame.Rect(border_rect))
+        pygame.draw.rect(gameDisplay, self.background_color, pygame.Rect(mask_rect))
+
+
     def draw(self):
+        self.__draw_border()
         gameDisplay.blit(self.btn_render,(self.x,self.y))
 
     def collides_with(self, coord):
@@ -176,26 +218,16 @@ class Direction(enum.Enum):
    DOWN = 4
 
 board = []
-restart_button = Text_Button(display_width / 2, display_height / 2 , "Restart")
-undo_button = Text_Button(display_width / 2, 15 , "Undo")
+restart_button = Text_Button(display_width / 2, display_height / 2 , text_map["restart"])
+undo_button = Text_Button(display_width / 2, 25 , text_map["undo"])
 
-###
-# Populates the board with random color tiles
-###
-def initialize_board():
-    global board
-    board = []
-    for i in range(board_col_nb):
-        board.append([])
-        for j in range(board_row_nb):
-            board[i].append(Tile(i,j,get_random_color()))
 
 ###
 # Draws the board on the surface
 ###
 def draw_board():
-    for i in range(board_col_nb):
-        for j in range(board_row_nb):
+    for i in range(len(board)):
+        for j in range(len(board[i])):
             if board[i][j] is not None:
                 board[i][j].draw()
 
@@ -203,8 +235,8 @@ def draw_board():
 # Get the tile that matches the coordinates, or None if no tiles are found 
 ###
 def get_tile_from_coord(coord):
-    for i in range(board_col_nb):
-        for j in range(board_row_nb):
+    for i in range(len(board)):
+        for j in range(len(board[i])):
             if board[i][j] is not None and board[i][j].rect.collidepoint(coord):
                 return board[i][j]
     return None
@@ -394,6 +426,20 @@ def check_game_over():
     else:
         return GameOver.PLAYING
 
+###
+# Populates the board with random color tiles
+###
+def initialize_board():
+    global board
+    board = []
+    for i in range(board_col_nb):
+        board.append([])
+        for j in range(board_row_nb):
+            board[i].append(Tile(i,j,get_random_color()))
+    if check_game_over() == GameOver.LOSE: # prevents generation with no clusters
+        initialize_board()
+
+
 def display_end_panel(msg, color, font):
     text = font.render(msg, True, color, color_white)
 
@@ -405,11 +451,11 @@ def display_end_panel(msg, color, font):
 
 def display_win_screen():
     font = pygame.font.SysFont('Comic Sans MS', 30)
-    display_end_panel("YOU WIN !! :)", color_red, font)
+    display_end_panel(text_map["you_won"], color_red, font)
 
 def display_lose_screen():
     font = pygame.font.SysFont('Comic Sans MS', 30)
-    display_end_panel("(you lose) :(", color_black, font)
+    display_end_panel(text_map["you_lost"], color_black, font)
 
 def display_end_screen(game_over):
     if game_over == GameOver.WIN:
@@ -489,11 +535,22 @@ def game_loop():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 if restart_button.collides_with(pos):
+                    button_on_mouse_down = restart_button
+                if undo_button.collides_with(pos):
+                    button_on_mouse_down = undo_button
+
+            if event.type == pygame.MOUSEBUTTONUP:
+                pos = pygame.mouse.get_pos()
+                if restart_button.collides_with(pos) and button_on_mouse_down == restart_button:
+                    button_on_mouse_down = None
                     # Restarts the game
                     initialize_board()
                     history = History()
                     game_over = GameOver.PLAYING
-                    print("RESTART")
+                if undo_button.collides_with(pos) and button_on_mouse_down == undo_button:
+                    button_on_mouse_down = None
+                    undo_step(history)
+                    game_over = GameOver.PLAYING
 
         pygame.display.update()
         clock.tick(60)
