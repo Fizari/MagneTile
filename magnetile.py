@@ -14,8 +14,8 @@ tile_width = 50
 tile_height = 1.6*tile_width
 board_col_nb = 25
 board_row_nb = 10
-board_col_nb = 6
-board_row_nb = 2
+board_col_nb = 6 #FOR TESTING
+board_row_nb = 2 #FOR TESTING
 
 color_black = (0,0,0)
 color_white = (255,255,255)
@@ -35,7 +35,7 @@ def get_random_color():
 
 pygame.init()
 gameDisplay = pygame.display.set_mode((display_width,display_height))
-pygame.display.set_caption('Tuiles')
+pygame.display.set_caption('MagneTile')
 clock = pygame.time.Clock()
 
 class Tile:
@@ -85,12 +85,40 @@ class Tile:
     def  __str__(self):
         return "("+str(self.i)+","+str(self.j)+") is_in_place : "+str(self.is_in_place())
 
+class Text_Button:
+    x = 0
+    y = 0
+    text_color = color_black
+    background_color = color_white
+    rect = pygame.Rect(0,0,0,0)
+    btn_render = None
+
+    def __init__(self, x, y, text):
+        """ (x,y) are coordinated of center of the button"""
+        font_btn = pygame.font.SysFont('Comic Sans MS', 30)
+        self.btn_render = font_btn.render(text, True, self.text_color, self.background_color)
+        width = self.btn_render.get_rect().width
+        height = self.btn_render.get_rect().height
+        print ("INNER height "+str(height))
+        self.x = x - width / 2
+        self.y = y - height / 2
+        self.rect = pygame.Rect(self.x,self.y,width,height)
+
+    def draw(self):
+        gameDisplay.blit(self.btn_render,(self.x,self.y))
+
+    def collides_with(self, coord):
+        return self.rect.collidepoint(coord)
+
 board = []
+restart_button = Text_Button(display_width / 2, display_height / 2 , "Restart")
 
 ###
 # Populates the board with random color tiles
 ###
 def initialize_board():
+    global board
+    board = []
     for i in range(board_col_nb):
         board.append([])
         for j in range(board_row_nb):
@@ -300,19 +328,28 @@ def check_game_over():
     else:
         return GameOver.PLAYING
 
-def display_text_center(msg, color, font):
+def display_end_panel(msg, color, font):
     text = font.render(msg, True, color, color_white)
+
     x = display_width / 2 -  (text.get_rect().width / 2)
-    y = display_height / 2 - (text.get_rect().height / 2)
+    y = display_height / 2 - (text.get_rect().height / 2) - (restart_button.rect.height) - 10
     gameDisplay.blit(text,(x,y))
+
+    restart_button.draw()
 
 def display_win_screen():
     font = pygame.font.SysFont('Comic Sans MS', 30)
-    display_text_center("YOU WIN !! :)", color_red, font)
+    display_end_screen("YOU WIN !! :)", color_red, font)
 
 def display_lose_screen():
     font = pygame.font.SysFont('Comic Sans MS', 30)
-    display_text_center("(you lose) :(", color_black, font)
+    display_end_panel("(you lose) :(", color_black, font)
+
+def display_end_screen(game_over):
+    if game_over == GameOver.WIN:
+        display_win_screen()
+    if game_over == GameOver.LOSE:
+        display_lose_screen()
     
 
 def game_loop():
@@ -366,10 +403,14 @@ def game_loop():
                 if not processing_movements:
                     game_over = check_game_over()
 
-        if game_over == GameOver.WIN:
-            display_win_screen()
-        if game_over == GameOver.LOSE:
-            display_lose_screen()
+        else:
+            display_end_screen(game_over)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                if restart_button.collides_with(pos):
+                    initialize_board()
+                    game_over = GameOver.PLAYING
+                    print("RESTART")
 
         pygame.display.update()
         clock.tick(60)
