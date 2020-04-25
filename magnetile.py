@@ -2,6 +2,7 @@ import pygame
 from random import seed
 from random import randint
 import time
+import enum
 
 # seed random number generator
 seed(time.time())
@@ -13,6 +14,8 @@ tile_width = 50
 tile_height = 1.6*tile_width
 board_col_nb = 25
 board_row_nb = 10
+board_col_nb = 6
+board_row_nb = 2
 
 color_black = (0,0,0)
 color_white = (255,255,255)
@@ -267,52 +270,111 @@ def move_tiles_sideway(moves):
 
     return tiles_in_place
 
+class GameOver(enum.Enum):
+   WIN = 1
+   LOSE = 2
+   PLAYING = 3
+
+###
+# Checks the whole board is the game is over (won or lost)
+###
+def check_game_over():
+    tiles_checked = []
+    nb_clusters = 0
+    for i in range(len(board)):
+        for j in range(len(board[i])):
+            curr_tile = board[i][j]
+            if curr_tile is not None and not curr_tile in tiles_checked:
+                (cluster, _) = get_connected_tiles(curr_tile)
+                if len(cluster) > 1:
+                    nb_clusters = nb_clusters + 1
+                for t in cluster:
+                    tiles_checked.append(t)
+
+    print("nb of clusters : "+str(nb_clusters))
+    if nb_clusters == 0:
+        if len(tiles_checked) == 0:
+            return GameOver.WIN
+        else:
+            return GameOver.LOSE
+    else:
+        return GameOver.PLAYING
+
+def display_text_center(msg, color, font):
+    text = font.render(msg, True, color, color_white)
+    x = display_width / 2 -  (text.get_rect().width / 2)
+    y = display_height / 2 - (text.get_rect().height / 2)
+    gameDisplay.blit(text,(x,y))
+
+def display_win_screen():
+    font = pygame.font.SysFont('Comic Sans MS', 30)
+    display_text_center("YOU WIN !! :)", color_red, font)
+
+def display_lose_screen():
+    font = pygame.font.SysFont('Comic Sans MS', 30)
+    display_text_center("(you lose) :(", color_black, font)
+    
+
 def game_loop():
-    game_over = False #TODO define function to calculate winning state
+    game_over = GameOver.PLAYING 
+    app_running = True
     tile_on_mouse_down = Tile(-1,-1,color_white)
     processing_movements = False
     processing_falling_movements = False
     processing_sliding_movements = False
     downward_moves = {}
     sideway_moves = []
-    while not game_over:
+    while app_running:
         gameDisplay.fill(background) #In lieu of picture
         draw_board()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                game_over = True
+                app_running = False
 
-        if not processing_movements:
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                pos = pygame.mouse.get_pos()
-                clicked_tile = get_tile_from_coord(pos)
-                if clicked_tile is not None:
-                    tile_on_mouse_down = clicked_tile
-            if event.type == pygame.MOUSEBUTTONUP:
-                pos = pygame.mouse.get_pos()
-                clicked_tile = get_tile_from_coord(pos)
-                if clicked_tile is not None and clicked_tile == tile_on_mouse_down:
-                    tile_on_mouse_down = Tile(-1,-1,color_white)
-                    (connected, aff_columns) = get_connected_tiles(clicked_tile)
-                    for c in connected:
-                        board[c.i][c.j] = None
-                    processing_movements = True
-                    processing_falling_movements = True
-                    downward_moves = compute_downward_movements(aff_columns)
-        else:
-            if processing_falling_movements and not processing_sliding_movements:
-                processing_falling_movements = not move_tiles_downward(downward_moves)
-            if not processing_falling_movements:
-                if not processing_sliding_movements:
-                    sideway_moves = compute_side_movements()
-                    if sideway_moves != []:
-                        processing_sliding_movements = True
-                else:
-                    processing_sliding_movements = not move_tiles_sideway(sideway_moves)
-            processing_movements = processing_falling_movements or processing_sliding_movements
+        if game_over == game_over.PLAYING:
+            if not processing_movements:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    pos = pygame.mouse.get_pos()
+                    clicked_tile = get_tile_from_coord(pos)
+                    if clicked_tile is not None:
+                        tile_on_mouse_down = clicked_tile
+                if event.type == pygame.MOUSEBUTTONUP:
+                    pos = pygame.mouse.get_pos()
+                    clicked_tile = get_tile_from_coord(pos)
+                    if clicked_tile is not None and clicked_tile == tile_on_mouse_down:
+                        tile_on_mouse_down = Tile(-1,-1,color_white)
+                        (connected, aff_columns) = get_connected_tiles(clicked_tile)
+                        if len(connected) > 1:
+                            for c in connected:
+                                board[c.i][c.j] = None
+                            processing_movements = True
+                            processing_falling_movements = True
+                            downward_moves = compute_downward_movements(aff_columns)
+            else:
+                if processing_falling_movements and not processing_sliding_movements:
+                    processing_falling_movements = not move_tiles_downward(downward_moves)
+                if not processing_falling_movements:
+                    if not processing_sliding_movements:
+                        sideway_moves = compute_side_movements()
+                        if sideway_moves != []:
+                            processing_sliding_movements = True
+                    else:
+                        processing_sliding_movements = not move_tiles_sideway(sideway_moves)
+                processing_movements = processing_falling_movements or processing_sliding_movements
+
+                if not processing_movements:
+                    game_over = check_game_over()
+
+        if game_over == GameOver.WIN:
+            display_win_screen()
+        if game_over == GameOver.LOSE:
+            display_lose_screen()
 
         pygame.display.update()
         clock.tick(60)
+
+    
 
     pygame.quit()
     quit()
