@@ -169,6 +169,12 @@ class GameOver(enum.Enum):
    LOSE = 2
    PLAYING = 3
 
+class Direction(enum.Enum):
+   LEFT = 1
+   UP = 2
+   RIGHT = 3
+   DOWN = 4
+
 board = []
 restart_button = Text_Button(display_width / 2, display_height / 2 , "Restart")
 undo_button = Text_Button(display_width / 2, 15 , "Undo")
@@ -307,12 +313,19 @@ def compute_downward_movements(affected_columns):
 # Applies the moves from the list of Tile_Movement(see compute_downward_movements)
 # return a bool indicating if the tiles are in their respective place
 ###
-def move_tiles_downward(moves):
+def move_tiles(moves, direction):
     tiles_in_place = True
     for m in moves:
         t = m.tile
         (dest_i, dest_j) = m.to_dest
-        if t.fall_to(dest_i,dest_j):
+        finished = False
+
+        if direction == Direction.DOWN:
+            finished = t.fall_to(dest_i,dest_j)
+        if direction == Direction.LEFT:
+            finished = t.slide_left_to(dest_i,dest_j)
+
+        if finished:
             board[t.i][t.j] = None
             board[dest_i][dest_j] = t
             t.move(dest_i, dest_j)
@@ -338,26 +351,9 @@ def compute_side_movements():
         if board[i][max_j] is not None and nb_empty_col != 0:
             for j in range(len(board[i])):
                 if board[i][j] is not None:
-                    moves.append(Tile_Movement(board[i][j], (i -nb_empty_col ,j)))
+                    moves.append(Tile_Movement(board[i][j], (i - nb_empty_col ,j)))
             found_space = False
     return moves
-
-###
-# Applies the moves from the moves list (see compute_side_movements)
-###
-def move_tiles_sideway(moves):
-    tiles_in_place = True
-    for m in moves:
-        t = m.tile
-        (dest_i, dest_j) = m.to_dest
-        if t.slide_left_to(dest_i,dest_j):
-            board[t.i][t.j] = None
-            board[dest_i][dest_j] = t
-            t.move(dest_i, dest_j)
-        else:
-            tiles_in_place = False
-
-    return tiles_in_place
 
 ###
 # Undo the last step of the history
@@ -472,21 +468,21 @@ def game_loop():
                         undo_step(history)
             else:
                 if processing_falling_movements and not processing_sliding_movements:
-                    processing_falling_movements = not move_tiles_downward(downward_moves)
+                    processing_falling_movements = not move_tiles(downward_moves, Direction.DOWN)
                 if not processing_falling_movements:
                     if not processing_sliding_movements:
                         sideway_moves = compute_side_movements()
                         if sideway_moves != []:
                             processing_sliding_movements = True
                     else:
-                        processing_sliding_movements = not move_tiles_sideway(sideway_moves)
+                        processing_sliding_movements = not move_tiles(sideway_moves, Direction.LEFT)
                 processing_movements = processing_falling_movements or processing_sliding_movements
 
                 if not processing_movements:
                     # Finished moving tiles
                     game_over = check_game_over()
-                    history.add_tile_movements_to_current_step(downward_moves)
                     history.add_tile_movements_to_current_step(sideway_moves)
+                    history.add_tile_movements_to_current_step(downward_moves)
 
         else:
             display_end_screen(game_over)
