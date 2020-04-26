@@ -1,8 +1,46 @@
+import sys
+import getopt
+import time
+import enum
 import pygame
 from random import seed
 from random import randint
-import time
-import enum
+
+french_text_map = {
+    "undo" : "Annuler",
+    "restart" : "Rejouer",
+    "you_won" : "Vous avez gagné !! :)",
+    "you_lost" : "Vous avez perdu"
+}
+
+english_text_map = {
+    "undo" : "Undo",
+    "restart" : "Play again",
+    "you_won" : "You won !! :)",
+    "you_lost" : "You lost"
+}
+
+text_map = english_text_map
+
+def print_help():
+    print ("usage : magnetile.py [-l language]")
+    print ("        Languages are : french or english (default)")
+
+try:
+    options, remainder = getopt.getopt(sys.argv[1:],"hl:",["language=","--help"])
+except getopt.GetoptError:
+    print_help()
+    sys.exit(2)
+
+for opt, arg in options:
+    if opt in ("-l","--language"):
+        if arg == "french":
+            text_map = french_text_map
+        else:
+            print ("Languages are : french or english (default)")
+            sys.exit(2)
+    if opt in ("-h", "--help"):
+        print_help()
 
 # seed random number generator
 seed(time.time())
@@ -28,23 +66,6 @@ color_green = (119, 237, 131)
 color_blue = (119, 160, 237)
 color_yellow = (237, 215, 119) 
 background = color_white
-
-french_text_map = {
-    "undo" : "Annuler",
-    "restart" : "Rejouer",
-    "you_won" : "Vous avez gagné !! :)",
-    "you_lost" : "Vous avez perdu"
-}
-
-english_text_map = {
-    "undo" : "Undo",
-    "restart" : "Play again",
-    "you_won" : "You won !! :)",
-    "you_lost" : "You lost"
-}
-
-text_map = english_text_map
-#text_map = french_text_map
 
 ##########RAND
 colors_rand_arr = [color_red, color_green, color_blue, color_yellow]
