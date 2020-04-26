@@ -1,4 +1,5 @@
 import sys
+import os
 import getopt
 import time
 import enum
@@ -44,6 +45,7 @@ for opt, arg in options:
 
 # seed random number generator
 seed(time.time())
+fps = 60
 
 display_width = 850
 display_height = 700
@@ -56,28 +58,69 @@ board_row_nb = 9
 #board_row_nb = 2 #FOR TESTING
 
 tool_bar_height = 50
+
+#to center the grid in the window
 offset_x_grid = (display_width - (board_col_nb*tile_width)) / 2
 
-color_black = (0,0,0)
-color_white = (255,255,255)
-color_gray = (175, 185, 204)
-color_red = (237, 125, 119)
-color_green = (119, 237, 131)
-color_blue = (119, 160, 237)
-color_yellow = (237, 215, 119) 
-background = color_white
+class Color(enum.Enum):
+    BLACK = (0,0,0)
+    WHITE = (255,255,255)
+    GRAY = (175, 185, 204)
+    RED = (237, 125, 119)
+    GREEN = (119, 237, 131)
+    BLUE = (119, 160, 237)
+    YELLOW = (237, 215, 119)
+    PURPLE = (182, 3, 252)
 
-##########RAND
-colors_rand_arr = [color_red, color_green, color_blue, color_yellow]
+tiles_images_TEMP = {
+    Color.RED : os.path.join("images", "red_tile.png"),
+    Color.GREEN : os.path.join("images", "green_tile.png"),
+    Color.BLUE : os.path.join("images", "blue_tile.png"),
+    Color.YELLOW : os.path.join("images", "yellow_tile.png"),
+    Color.PURPLE : os.path.join("images", "purple_tile.png"),
+    Color.WHITE : os.path.join("images", "white_tile.png"),
+}
+
+tile_image_size = (60, 82)
+
+tiles_images = {
+    Color.RED : pygame.transform.scale(pygame.image.load(os.path.join("images", "red_tile.png")),tile_image_size),
+    Color.GREEN : pygame.transform.scale(pygame.image.load(os.path.join("images", "green_tile.png")), tile_image_size),
+    Color.BLUE : pygame.transform.scale(pygame.image.load(os.path.join("images", "blue_tile.png")), tile_image_size),
+    Color.YELLOW : pygame.transform.scale(pygame.image.load(os.path.join("images", "yellow_tile.png")), tile_image_size),
+    Color.PURPLE : pygame.transform.scale(pygame.image.load(os.path.join("images", "purple_tile.png")), tile_image_size),
+    Color.WHITE : pygame.transform.scale(pygame.image.load(os.path.join("images", "white_tile.png")), tile_image_size)
+}
+
+
+background = Color.WHITE.value
+
+###
+# Picks a random color
+###
+colors_rand_arr = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW]
 def get_random_color():
     r = randint(0, 3)
     return colors_rand_arr[r]
-##############
 
 pygame.init()
 gameDisplay = pygame.display.set_mode((display_width,display_height))
 pygame.display.set_caption('MagneTile')
 clock = pygame.time.Clock()
+
+class Tile_Image:
+    """ Represents a tile image to be displayed on screen"""
+    source_file = ""
+    rect = pygame.Rect(0,0,0,0)
+    image = None
+
+    def __init__(self, color):
+        #self.source_file = tiles_images[color]
+        #self.image = pygame.transform.scale(pygame.image.load(self.source_file),(60, 85))
+        self.image = tiles_images[color]
+
+    def draw(self, coord):
+        gameDisplay.blit(self.image, coord)
 
 class Tile:
     """ Represents a Tile in space """
@@ -85,8 +128,9 @@ class Tile:
     y_offset = tool_bar_height
     i = 0
     j = 0
+    image = None
     rect = pygame.Rect(0,0,0,0)
-    color = color_red
+    color = None # /!\ Color enum (not Tuple)
     speed = 6 # speed when drawing
     k = 1.05 # acceleration factor
 
@@ -95,9 +139,11 @@ class Tile:
         self.j = j
         self.rect = pygame.Rect((i*tile_width + self.x_offset,j*tile_height + self.y_offset),(tile_width, tile_height))
         self.color = color
+        self.image = Tile_Image(color)
 
     def draw(self):
-        pygame.draw.rect(gameDisplay, self.color, pygame.Rect(self.rect))
+        #self.image.draw((self.rect.x, self.rect.y))
+        pygame.draw.rect(gameDisplay, self.color.value, pygame.Rect(self.rect))
 
     def move(self, i, j):
         self.i = i
@@ -139,7 +185,7 @@ class Tile:
         return "TILE("+str(self.i)+","+str(self.j)+")"
 
 class Tile_Movement():
-    tile = Tile(0,0,color_white)
+    tile = None
     from_source = (0,0)
     to_dest = (0,0)
 
@@ -154,13 +200,13 @@ class Tile_Movement():
 class Text_Button:
     x = 0
     y = 0
-    text_color = color_black
-    background_color = color_white
+    text_color = Color.BLACK.value
+    background_color = Color.WHITE.value
     rect = pygame.Rect(0,0,0,0)
     btn_render = None
 
     border_thickness = 2
-    border_color = color_black
+    border_color = Color.BLACK.value
     border_padding = 5
 
     def __init__(self, x, y, text):
@@ -227,7 +273,7 @@ class History:
         if curr != None:
             self.get_current_step().add_moves(moves)
 
-class GameOver(enum.Enum):
+class Game_Over(enum.Enum):
    WIN = 1
    LOSE = 2
    PLAYING = 3
@@ -441,11 +487,11 @@ def check_game_over():
 
     if nb_clusters == 0:
         if len(tiles_checked) == 0:
-            return GameOver.WIN
+            return Game_Over.WIN
         else:
-            return GameOver.LOSE
+            return Game_Over.LOSE
     else:
-        return GameOver.PLAYING
+        return Game_Over.PLAYING
 
 ###
 # Populates the board with random color tiles
@@ -457,12 +503,12 @@ def initialize_board():
         board.append([])
         for j in range(board_row_nb):
             board[i].append(Tile(i,j,get_random_color()))
-    if check_game_over() == GameOver.LOSE: # prevents generation with no clusters
+    if check_game_over() == Game_Over.LOSE: # prevents generation with no clusters
         initialize_board()
 
 
 def display_end_panel(msg, color, font):
-    text = font.render(msg, True, color, color_white)
+    text = font.render(msg, True, color, Color.WHITE.value)
 
     x = display_width / 2 -  (text.get_rect().width / 2)
     y = display_height / 2 - (text.get_rect().height / 2) - (restart_button.rect.height) - 10
@@ -472,23 +518,23 @@ def display_end_panel(msg, color, font):
 
 def display_win_screen():
     font = pygame.font.SysFont('Comic Sans MS', 30)
-    display_end_panel(text_map["you_won"], color_red, font)
+    display_end_panel(text_map["you_won"], Color.RED.value, font)
 
 def display_lose_screen():
     font = pygame.font.SysFont('Comic Sans MS', 30)
-    display_end_panel(text_map["you_lost"], color_black, font)
+    display_end_panel(text_map["you_lost"], Color.BLACK.value, font)
 
 def display_end_screen(game_over):
-    if game_over == GameOver.WIN:
+    if game_over == Game_Over.WIN:
         display_win_screen()
-    if game_over == GameOver.LOSE:
+    if game_over == Game_Over.LOSE:
         display_lose_screen()
     
 
 def game_loop():
-    game_over = GameOver.PLAYING 
+    game_over = Game_Over.PLAYING 
     app_running = True
-    tile_on_mouse_down = Tile(-1,-1,color_white)
+    tile_on_mouse_down = None
     button_on_mouse_down = None
     processing_movements = False
     processing_falling_movements = False
@@ -520,7 +566,7 @@ def game_loop():
                     pos = pygame.mouse.get_pos()
                     clicked_tile = get_tile_from_coord(pos)
                     if clicked_tile is not None and clicked_tile == tile_on_mouse_down:
-                        tile_on_mouse_down = Tile(-1,-1,color_white)
+                        tile_on_mouse_down = None
                         (connected, aff_columns) = get_connected_tiles(clicked_tile)
                         if len(connected) > 1:
                             for c in connected:
@@ -563,18 +609,18 @@ def game_loop():
             if event.type == pygame.MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos()
                 if restart_button.collides_with(pos) and button_on_mouse_down == restart_button:
-                    button_on_mouse_down = None
                     # Restarts the game
                     initialize_board()
                     history = History()
-                    game_over = GameOver.PLAYING
+                    game_over = Game_Over.PLAYING
                 if undo_button.collides_with(pos) and button_on_mouse_down == undo_button:
-                    button_on_mouse_down = None
                     undo_step(history)
-                    game_over = GameOver.PLAYING
+                    game_over = Game_Over.PLAYING
+
+                button_on_mouse_down = None
 
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(fps)
 
     
 
