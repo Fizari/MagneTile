@@ -525,8 +525,10 @@ def undo_step(history):
         (from_i, from_j) = m.from_source
         t.move(from_i, from_j)
         board[from_i][from_j] = t
+        t.draw()
     for t in last_step.cluster:
         board[t.i][t.j] = t
+        t.draw()
 
 ###
 # Checks the whole board is the game is over (won or lost)
