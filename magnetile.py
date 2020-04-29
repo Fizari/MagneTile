@@ -93,7 +93,7 @@ tiles_images = {
 }
 
 
-background = Color.WHITE.value
+background_color = Color.WHITE
 
 ###
 # Picks a random color
@@ -104,20 +104,57 @@ def get_random_color():
     return colors_rand_arr[r]
 
 pygame.init()
-gameDisplay = pygame.display.set_mode((display_width,display_height))
+gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('MagneTile')
 clock = pygame.time.Clock()
 
-class Tile_Image:
-    """ Represents a tile image to be displayed on screen"""
-    source_file = ""
-    rect = pygame.Rect(0,0,0,0)
-    image = None
+class Custom_Range:
+    start = 0
+    end = 0
+    length = 0
 
-    def __init__(self, color):
-        #self.source_file = tiles_images[color]
-        #self.image = pygame.transform.scale(pygame.image.load(self.source_file),(60, 85))
+    def __init__(self, start, end):
+        self.start = start if start <= end else end 
+        self.end = end if start <= end else start 
+        self.length = self.end - self.start
+
+    def is_overlaping(self, o_range):
+        res = False
+        if self.start < o_range.start:
+            if o_range.start <= self.end:
+                res = True
+        else:
+            if self.start <= o_range.end:
+                res = True
+        return res
+
+    def union(self, o_range):
+        if self.is_overlaping(o_range):
+            return Custom_Range(min(self.start, o_range.start), max(self.end, o_range.end))
+        else:
+            return None
+
+    def get_range(self):
+        return range(self.start, self.end + 1)
+
+    def __str__(self):
+        return "("+str(self.start)+","+str(self.end)+")"
+
+class Tile_Image(pygame.sprite.Sprite):
+    """ Represents a tile image to be displayed on screen"""
+
+    def __init__(self, color, coord):
+        super().__init__()
         self.image = tiles_images[color]
+        self.rect = self.image.get_rect()
+        (x,y) = coord
+        self.rect.x = x
+        self.rect.y = y
+
+    def move (self, coord):
+        (x, y) = coord
+        self.rect.x = x
+        self.rect.y = y
 
     def draw(self, coord):
         gameDisplay.blit(self.image, coord)
@@ -128,7 +165,7 @@ class Tile:
     y_offset = tool_bar_height
     i = 0
     j = 0
-    image = None
+    tile_image = None
     rect = pygame.Rect(0,0,0,0)
     color = None # /!\ Color enum (not Tuple)
     speed = 6 # speed when drawing
@@ -137,21 +174,41 @@ class Tile:
     def __init__(self, i, j, color):
         self.i = i
         self.j = j
-        self.rect = pygame.Rect((i*tile_width + self.x_offset,j*tile_height + self.y_offset),(tile_width, tile_height))
+        x = i*tile_width + self.x_offset
+        y = j*tile_height + self.y_offset
+        self.rect = pygame.Rect((x,y),(tile_width, tile_height))
         self.color = color
-        self.image = Tile_Image(color)
+        self.tile_image = Tile_Image(color, (x,y))
+
+    def get_supposed_coord(self):
+        return (self.i*tile_width + self.x_offset, self.j*tile_height + self.y_offset)
+
+    def get_coord_from_grid_pos(self, i, j):
+        return (i*tile_width + self.x_offset, j*tile_height + self.y_offset)
 
     def draw(self):
-        #self.image.draw((self.rect.x, self.rect.y))
-        pygame.draw.rect(gameDisplay, self.color.value, pygame.Rect(self.rect))
+        self.tile_image.draw((self.rect.x, self.rect.y))
+        #pygame.draw.rect(gameDisplay, self.color.value, pygame.Rect(self.rect))
+
+    def draw_background(self, background_color):
+        pygame.draw.rect(gameDisplay, background_color.value, pygame.Rect(self.rect))
+
+    def draw_supposed_background(self, background_color):
+        (x,y) = self.get_supposed_coord()
+        print("DRAWING BACKGROUND")
+        pygame.draw.rect(gameDisplay, background_color.value, pygame.Rect((x,y),(tile_width, tile_height)))
 
     def move(self, i, j):
         self.i = i
         self.j = j
-        self.rect = pygame.Rect((i*tile_width + self.x_offset,j*tile_height + self.y_offset),(tile_width, tile_height))
+        x = i*tile_width + self.x_offset
+        y = j*tile_height + self.y_offset
+        self.rect = pygame.Rect((x,y),(tile_width, tile_height))
+        self.tile_image.move((x, y)) 
 
     def is_in_place(self):
-        return self.rect.x == self.i*tile_width and self.rect.y == self.j*tile_height
+        (x,y) = self.get_coord_from_grid_pos()
+        return self.rect.x == x and self.rect.y == y
 
     def __accelerate(self):
         self.speed *= self.k
@@ -160,8 +217,9 @@ class Tile:
         self.speed = 6
 
     def fall_to(self, i, j):
-        """Draws the tile falling toward (i,j)"""
-        if self.rect.y + self.speed >= j*tile_height + self.y_offset:
+        (x,y) = self.get_coord_from_grid_pos(i,j)
+        """Draws the tile falling toward (i,j), only the rectangle that represent the tile is moving, not the (i,j) coordinates"""
+        if self.rect.y + self.speed >= y:
             self.__stop_speed()
             return True
         else:
@@ -169,16 +227,19 @@ class Tile:
             curr_y = self.rect.y
             self.__accelerate()
             self.rect = pygame.Rect((curr_x,curr_y + self.speed),(tile_width, tile_height))
+            self.tile_image.move((curr_x,curr_y + self.speed))
             return False
 
     def slide_left_to(self, i, j):
-        """Draws the tile sliding left toward (i,j)"""
-        if self.rect.x - self.speed <= i*tile_width + self.x_offset:
+        """Draws the tile sliding left toward (i,j), same as fall_to(self, i, j)"""
+        (x,y) = self.get_coord_from_grid_pos(i,j)
+        if self.rect.x - self.speed <= x:
             return True
         else:
             curr_x = self.rect.x
             curr_y = self.rect.y
             self.rect = pygame.Rect((curr_x - self.speed,curr_y),(tile_width, tile_height))
+            self.tile_image.move((curr_x - self.speed,curr_y))
             return False
 
     def  __str__(self):
@@ -288,15 +349,6 @@ board = []
 restart_button = Text_Button(display_width / 2, display_height / 2 , text_map["restart"])
 undo_button = Text_Button(display_width / 2, 25 , text_map["undo"])
 
-
-###
-# Draws the board on the surface
-###
-def draw_board():
-    for i in range(len(board)):
-        for j in range(len(board[i])):
-            if board[i][j] is not None:
-                board[i][j].draw()
 
 ###
 # Get the tile that matches the coordinates, or None if no tiles are found 
@@ -455,6 +507,13 @@ def compute_side_movements():
     return moves
 
 ###
+# Draws the list of rectangle bg_to_draw on the screen
+###
+def draw_background_tiles(bg_to_draw):
+    for r in bg_to_draw:
+        pygame.draw.rect(gameDisplay, background_color.value, r)
+
+###
 # Undo the last step of the history
 ###
 def undo_step(history):
@@ -494,6 +553,50 @@ def check_game_over():
         return Game_Over.PLAYING
 
 ###
+# Get a list of background rectangles to draw from a list of moves for the falling of the tiles
+###
+def compute_background_to_draw(moves):
+    res = []
+    for m in moves:
+        t = m.tile
+        res.append(t.rect)
+    return res
+
+###
+# Get a list of background rectangles to draw from a list of moves for the sliding of the tiles
+###
+def compute_background_to_draw_for_sliding(moves):
+    rect_to_draw = []
+    range_dict = {} # keys : line number | values : list of range of movements
+    for m in moves:
+        t = m.tile
+        (i,j) = (t.i, t.j)
+        from_i = m.from_source[0]
+        to_i = m.to_dest[0]
+        mov_range = Custom_Range(to_i, from_i)
+        if not j in range_dict.keys():
+            range_dict[j] = [mov_range]
+        else:
+            add_range = True
+            for r in range_dict[j]:
+                union = r.union(mov_range)
+                if union is not None:
+                    r.start = union.start
+                    r.end = union.end
+                    add_range = False
+            if add_range:
+                range_dict[j].append(mov_range)
+
+    for j in range_dict.keys():
+        for r in range_dict[j]:
+            for i in r.get_range():
+                tile = board[i][j]
+                if tile is not None:
+                    rect_to_draw.append(tile.rect)
+
+    return rect_to_draw
+
+###
 # Populates the board with random color tiles
 ###
 def initialize_board():
@@ -502,10 +605,18 @@ def initialize_board():
     for i in range(board_col_nb):
         board.append([])
         for j in range(board_row_nb):
-            board[i].append(Tile(i,j,get_random_color()))
+            new_tile = Tile(i,j,get_random_color())
+            board[i].append(new_tile)
     if check_game_over() == Game_Over.LOSE: # prevents generation with no clusters
         initialize_board()
 
+###
+# Draws the moving tiles
+###
+def draw_moving_tiles(moves):
+    for m in moves:
+        t = m.tile
+        t.draw()
 
 def display_end_panel(msg, color, font):
     text = font.render(msg, True, color, Color.WHITE.value)
@@ -529,22 +640,30 @@ def display_end_screen(game_over):
         display_win_screen()
     if game_over == Game_Over.LOSE:
         display_lose_screen()
-    
+
+###
+# Draws the board on the surface
+###
+def draw_board():
+    gameDisplay.fill(background_color.value) #In lieu of picture
+    for i in range(len(board)):
+        for j in range(len(board[i])):
+            if board[i][j] is not None:
+                board[i][j].draw()
 
 def game_loop():
     game_over = Game_Over.PLAYING 
     app_running = True
     tile_on_mouse_down = None
     button_on_mouse_down = None
-    processing_movements = False
     processing_falling_movements = False
     processing_sliding_movements = False
+    bg_to_draw = []
     downward_moves = {}
     sideway_moves = []
     history = History()
+    draw_board()
     while app_running:
-        gameDisplay.fill(background) #In lieu of picture
-        draw_board()
         undo_button.draw()
 
         for event in pygame.event.get():
@@ -552,7 +671,7 @@ def game_loop():
                 app_running = False
 
         if game_over == game_over.PLAYING:
-            if not processing_movements:
+            if not (processing_falling_movements or processing_sliding_movements) :
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     clicked_tile = get_tile_from_coord(pos)
@@ -570,29 +689,38 @@ def game_loop():
                         (connected, aff_columns) = get_connected_tiles(clicked_tile)
                         if len(connected) > 1:
                             for c in connected:
+                                bg_to_draw.append(board[c.i][c.j].rect)
                                 board[c.i][c.j] = None
                             history.add_new_step(connected)
-                            processing_movements = True
                             processing_falling_movements = True
+                            # Compute first time falling tiles
                             downward_moves = compute_downward_movements(aff_columns)
+                            bg_to_draw = bg_to_draw + compute_background_to_draw(downward_moves)
 
                     if undo_button.collides_with(pos) and button_on_mouse_down == undo_button:
                         button_on_mouse_down = None
                         undo_step(history)
             else:
+                draw_background_tiles(bg_to_draw)
                 if processing_falling_movements and not processing_sliding_movements:
+                    # Falling tiles
                     processing_falling_movements = not move_tiles(downward_moves, Direction.DOWN)
+                    draw_moving_tiles(downward_moves)
                 if not processing_falling_movements:
                     if not processing_sliding_movements:
                         sideway_moves = compute_side_movements()
                         if sideway_moves != []:
+                            # Compute first time sliding tiles
+                            bg_to_draw = compute_background_to_draw_for_sliding(sideway_moves)
                             processing_sliding_movements = True
                     else:
+                        #Sliding tiles
                         processing_sliding_movements = not move_tiles(sideway_moves, Direction.LEFT)
-                processing_movements = processing_falling_movements or processing_sliding_movements
+                        draw_moving_tiles(sideway_moves)
 
-                if not processing_movements:
+                if not (processing_falling_movements or processing_sliding_movements):
                     # Finished moving tiles
+                    bg_to_draw = []
                     game_over = check_game_over()
                     history.add_tile_movements_to_current_step(sideway_moves)
                     history.add_tile_movements_to_current_step(downward_moves)
@@ -611,9 +739,11 @@ def game_loop():
                 if restart_button.collides_with(pos) and button_on_mouse_down == restart_button:
                     # Restarts the game
                     initialize_board()
+                    draw_board()
                     history = History()
                     game_over = Game_Over.PLAYING
                 if undo_button.collides_with(pos) and button_on_mouse_down == undo_button:
+                    # Undo last step
                     undo_step(history)
                     game_over = Game_Over.PLAYING
 
