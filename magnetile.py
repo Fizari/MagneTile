@@ -651,35 +651,35 @@ def compute_background_to_draw(moves):
 # Get a list of background rectangles to draw from a list of moves for the sliding of the tiles
 ###
 def compute_background_to_draw_for_sliding(moves):
-    rect_to_draw = []
-    range_dict = {} # keys : line number | values : list of range of movements
+    min_x = display_width
+    max_x = 0
+    min_y = display_height
+    max_y = 0
+
     for m in moves:
         t = m.tile
-        (i,j) = (t.i, t.j)
-        from_i = m.from_source[0]
-        to_i = m.to_dest[0]
-        mov_range = Custom_Range(to_i, from_i)
-        if not j in range_dict.keys():
-            range_dict[j] = [mov_range]
-        else:
-            add_range = True
-            for r in range_dict[j]:
-                union = r.union(mov_range)
-                if union is not None:
-                    r.start = union.start
-                    r.end = union.end
-                    add_range = False
-            if add_range:
-                range_dict[j].append(mov_range)
+        if t.rect.x > max_x:
+            max_x = t.rect.x
+        (dest_x,dest_y) = get_xy_from_ij(m.to_dest)
+        if dest_x < min_x:
+            min_x = dest_x
+        if t.rect.y < min_y:
+            min_y = t.rect.y
+        if t.rect.y > max_y:
+            max_y = t.rect.y
 
-    for j in range_dict.keys():
-        for r in range_dict[j]:
-            for i in r.get_range():
-                tile = board[i][j]
-                if tile is not None:
-                    rect_to_draw.append(tile.rect)
+    min_x = min_x + side_width
+    max_x = max_x + tile_width 
+    max_y = max_y + tile_height 
+    width = (max_x - min_x) + side_width
+    height = max_y - min_y + bottom_height
+    r = pygame.Rect((min_x, min_y), (width, height))
+    return r
 
-    return rect_to_draw
+def get_xy_from_ij(coord):
+    (i,j) = coord
+    t = Tile(i,j,Color.RED)
+    return (t.rect.x, t.rect.y)
 
 def compute_falling_tiles_data(tiles):
     bot_dict = {}
@@ -775,7 +775,8 @@ def compute_sides_to_draw(removed_tiles, moves):
                         n_corner = board[check_right.i + 1][check_right.j + 1]
                         if n_corner is not None:
                             tiles_to_draw_third_pass.append(([True,False,False,False], n_corner)) # Add center of corner neighbor when tiles are falling
-
+                    if check_right.i < len(board) and check_right.j < len(board[check_right.i]):
+                        background_to_draw.append(pygame.Rect((check_right.rect.right, check_right.rect.bottom), tile_image_side_corner))
 
         # BOTTOM EDGE
         if t.j == bot_edge[t.i]:
@@ -791,6 +792,8 @@ def compute_sides_to_draw(removed_tiles, moves):
 
     tiles_to_draw_all_passes = tiles_to_draw_first_pass + tiles_to_draw_second_pass + tiles_to_draw_third_pass
     return (tiles_to_draw_all_passes,background_to_draw)
+
+
 
 def print_pass(list_pass):
     print("<><><><><> PASS <><><><><>")
@@ -826,10 +829,10 @@ def initialize_board():
 ###
 # Draws the moving tiles
 ###
-def draw_moving_tiles(moves):
+def draw_sliding_tiles(moves):
     for m in moves:
         t = m.tile
-        t.draw()
+        t.draw_all_sides()
 
 ###
 # Draws a tile with its perspective according to a list of sides to draw
@@ -926,18 +929,18 @@ def game_loop():
                 if processing_falling_movements and not processing_sliding_movements:
                     # Falling tiles
                     processing_falling_movements = not move_tiles(downward_moves, Direction.DOWN)
-                    draw_tile_with_perspective(sides_to_draw)
+                    draw_tile_with_perspective(sides_to_draw)   
                 if not processing_falling_movements:
                     if not processing_sliding_movements:
                         sideway_moves = compute_side_movements()
                         if sideway_moves != []:
                             # Compute first time sliding tiles
-                            bg_to_draw = compute_background_to_draw_for_sliding(sideway_moves)
+                            bg_to_draw = [compute_background_to_draw_for_sliding(sideway_moves)]
                             processing_sliding_movements = True
                     else:
                         #Sliding tiles
                         processing_sliding_movements = not move_tiles(sideway_moves, Direction.LEFT)
-                        draw_moving_tiles(sideway_moves)
+                        draw_sliding_tiles(sideway_moves)
 
                 if not (processing_falling_movements or processing_sliding_movements):
                     # Finished moving tiles
