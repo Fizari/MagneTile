@@ -23,12 +23,15 @@ english_text_map = {
 
 text_map = english_text_map
 
+number_of_color = 5
+number_of_color_min = 3
+
 def print_help():
     print ("usage : magnetile.py [-l language]")
     print ("        Languages are : french or english (default)")
 
 try:
-    options, remainder = getopt.getopt(sys.argv[1:],"hl:",["language=","--help"])
+    options, remainder = getopt.getopt(sys.argv[1:],"hl:c:",["language=","--help","colors="])
 except getopt.GetoptError:
     print_help()
     sys.exit(2)
@@ -40,8 +43,21 @@ for opt, arg in options:
         else:
             print ("Languages are : french or english (default)")
             sys.exit(2)
+    if opt in ("-c","--colors"):
+        nb = 0
+        try:
+            nb = int(arg)
+        except:
+            print_help()
+            sys.exit(2)
+        if nb <= number_of_color and nb >=3:
+            number_of_color = nb
+        else:
+            print ("Please choose a number of colors between "+str(number_of_color_min)+" and "+str(number_of_color))
+            sys.exit(2)
     if opt in ("-h", "--help"):
         print_help()
+        sys.exit(2)
 
 # seed random number generator
 seed(time.time())
@@ -54,8 +70,6 @@ tile_width = 45
 tile_height = int(1.6*tile_width)
 board_col_nb = 18
 board_row_nb = 9
-#board_col_nb = 6 #FOR TESTING
-#board_row_nb = 2 #FOR TESTING
 
 tool_bar_height = 50
 
@@ -116,9 +130,9 @@ background_color = Color.WHITE
 ###
 # Picks a random color
 ###
-colors_rand_arr = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW]
+colors_rand_arr = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.PURPLE]
 def get_random_color():
-    r = randint(0, 3)
+    r = randint(0, number_of_color - 1)
     return colors_rand_arr[r]
 
 pygame.init()
