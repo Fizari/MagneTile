@@ -227,6 +227,12 @@ class Tile:
         self.tile_image.draw((self.rect.x, self.rect.y))
         #pygame.draw.rect(gameDisplay, self.color.value, pygame.Rect(self.rect))
 
+    def draw_all_sides(self):
+        self.draw()
+        self.tile_image.draw_side()
+        self.tile_image.draw_bottom()
+        self.tile_image.draw_corner()
+
     def move(self, i, j):
         self.i = i
         self.j = j
@@ -383,6 +389,37 @@ board = []
 restart_button = Text_Button(display_width / 2, display_height / 2 , text_map["restart"])
 undo_button = Text_Button(display_width / 2, 25 , text_map["undo"])
 
+###
+# TEMPORARY for testing
+###
+def initialize_custom_board():
+    template = [
+        [Color.BLUE,        Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,    Color.BLUE,   Color.GREEN],
+        [None,        Color.GREEN,         Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [None,        Color.GREEN,  Color.GREEN,  Color.GREEN,  Color.RED,     Color.YELLOW, Color.GREEN],
+        [Color.GREEN, Color.RED,    Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [Color.GREEN, Color.RED,    Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [None,        None,         Color.GREEN,  Color.RED,    Color.YELLOW,  Color.YELLOW, Color.GREEN],
+        [None,        Color.GREEN,  Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [Color.BLUE,        Color.BLUE,   Color.BLUE,   Color.RED,    Color.BLUE,    Color.BLUE,   Color.GREEN]
+    ]
+    for i in range(len(template)):
+        board.append([])
+        for j in range(len(template[i])):
+            if template[i][j] is None:
+                board[i].append(None) 
+            else:
+                board[i].append(Tile(i,j, template[i][j])) 
+
+###
+# Draws the board on the surface
+###
+def draw_board():
+    gameDisplay.fill(background_color.value) 
+    for i in range(len(board)):
+        for j in range(len(board[i])):
+            if board[i][j] is not None:
+                board[i][j].draw_all_sides()
 
 ###
 # Get the tile that matches the coordinates, or None if no tiles are found 
@@ -572,10 +609,9 @@ def undo_step(history):
         (from_i, from_j) = m.from_source
         t.move(from_i, from_j)
         board[from_i][from_j] = t
-        t.draw()
     for t in last_step.cluster:
         board[t.i][t.j] = t
-        t.draw()
+    draw_board()
 
 ###
 # Checks the whole board is the game is over (won or lost)
@@ -645,89 +681,21 @@ def compute_background_to_draw_for_sliding(moves):
 
     return rect_to_draw
 
-###
-# Returns a list of tiles that represent the 'edge' of the (removed + moving) tiles
-###
-def compute_edge(tile_list, comparator):
-    edge = {} # dictionary : {ROW_NUMBER : TILE_WITH_MINIMUM_OR_MAXIMUM_COLUMN_NUMBER}
-
-    for t in tile_list:
-        if t.j not in edge.keys():
-            edge[t.j] = t
+def compute_falling_tiles_data(tiles):
+    bot_dict = {}
+    falling_indexes = set()
+    for t in tiles :
+        if board[t.i][t.j] != None:
+            falling_indexes.add(t.i)
+        if t.i not in bot_dict.keys():
+            bot_dict[t.i] = t.j
         else:
-            curr_min_tile = edge[t.j]
-            if comparator(t.i, curr_min_tile.i):
-                edge[t.j] = t
+            if t.j > bot_dict[t.i]:
+                bot_dict[t.i] = t.j
 
-    sorted_edge = sort_tiles(edge.values(), True)
-    i_threshold = sorted_edge[0].i
-    curated_edge = []
-    for t in sorted_edge:
-        if comparator(t.i, i_threshold):
-            i_threshold = t.i
-            curated_edge.append(t)
+    return (bot_dict, list(falling_indexes))
 
-    return curated_edge
-
-def compute_edge_side_background(sorted_tile_list):
-    edge = [] 
-    last_tile = sorted_tile_list[0]
-    max_j = last_tile.j
-    for t in sorted_tile_list:
-        if t.j != last_tile.j: # new line
-            if last_tile.j > max_j:
-                max_j = last_tile.j
-            # add last tile to edge
-            edge.append(last_tile)
-        if t.i != last_tile.i or t.i != last_tile.i + 1: # gap in line
-            # add to edge
-            edge.append(last_tile)
-        last_tile = t
-
-    curated_edge = []
-    for t in reversed(edge):
-        if t.j <= max_j:
-            curated_edge.append(t)
-
-    return curated_edge
-
-def compute_left_edge(tile_list):
-    return compute_edge(tile_list, lambda i1,i2 : i1 <= i2)
-
-def compute_right_edge(tile_list):
-    return compute_edge(tile_list, lambda i1,i2 : i1 >= i2)
-
-###
-# return a dictionary of the corners of an edge (see above)
-###
-def compute_corners_of_edge(sorted_edge_list):
-    corners = {}
-    for t in sorted_edge_list:
-        if not t.i in corners.keys():
-            corners[t.i] = t
-        else:
-            if t.j > corners[t.i].j:
-                corners[t.i] = t
-
-    return corners 
-
-def compute_side_background_to_draw(sorted_edge_list):
-    bg_to_draw = [] # list of rect
-    for t in sorted_edge_list:
-        if (t.i == len(board) - 1) or (board[t.i + 1][t.j] is None):
-            bg_to_draw.append(pygame.Rect((t.rect.right, t.rect.top),(side_width,t.rect.height)))
-            print("BACKGROUNg TILE TO DRAW : "+str(t.rect.right) + ","+ str(t.rect.top) + "," + str(side_width) + "," + str(t.rect.height))
-    return bg_to_draw
-
-###
-# Return a list of sides to draw from the removed tiles and the affected tiles that will fall
-# 
-###
 def compute_sides_to_draw(removed_tiles, moves):
-
-    tiles_side_to_draw_first_pass = {} # TODO REWORK WITH dict {TILE : {Perspective, ...}, ...}
-    tiles_side_to_draw_seconde_pass = {} # TODO REWORK WITH dict {TILE : {Perspective, ...}, ...}
-
     all_tiles = [m.tile for m in moves]
     all_tiles = all_tiles + list(removed_tiles)
     all_tiles = sort_tiles(all_tiles)
@@ -738,89 +706,108 @@ def compute_sides_to_draw(removed_tiles, moves):
 
     background_to_draw = []
 
-    # LEFT EDGE
-    curated_left_edge = compute_left_edge(all_tiles)
-    for t in curated_left_edge:
-        if t.i > 0:
-            neighbor = board[t.i - 1][t.j]
-            if neighbor is not None:
-                tiles_to_draw_first_pass.append(([False,True,False, True],neighbor)) # Add Side and Corner to left egdge of all tiles
+    (bot_edge, falling_indexes) = compute_falling_tiles_data(all_tiles)
 
-    corners = compute_corners_of_edge(curated_left_edge) # To fix the corner problem on the left side
+    last_tile = None
+    top_left_tile_found = False
+    for t in all_tiles:
 
-    # To fix the corner problem
-    for t in corners.values():
-        print (t)
-        if t.j + 1 < len(board[t.i]):
-            neighbor = board[t.i][t.j + 1]
-            if neighbor is not None: # useless ?
-                print ("Should draw center of "+str(neighbor))
-                tiles_to_draw_second_pass.append(([True,False,False,False], neighbor)) # Add center bottom left corner tile
-            else:
-                print("neighbor is none")
-                print (neighbor)
+        check_left_List = []
+        check_right_list = []
 
-    top_left_corner_tile = curated_left_edge[len(curated_left_edge) - 1] # to fix the other corner problem
-    print ("Corner top left "+str(top_left_corner_tile))
-    if top_left_corner_tile.i > 0 and top_left_corner_tile.j > 0:
-        neighbor = board[top_left_corner_tile.i - 1][top_left_corner_tile.j - 1]
-        if neighbor is not None:
-            tiles_to_draw_first_pass.append(([False,False,False,True], neighbor)) # Add corner to top left neighbor
-
-    # RIGHT EDGE
-    curated_right_edge = compute_right_edge(all_tiles)
-    corners = compute_corners_of_edge(curated_right_edge)
-    for t in curated_right_edge:
-        if t.i + 1 < len(board):
-            neighbor = board[t.i + 1][t.j]
-            if neighbor is not None:
-                tiles_to_draw_third_pass.append(([True,False,False,False],neighbor)) # Add center to right egdge neighbors
-
-    for t in corners.values():
-        if t.i + 1 < len(board) and t.j + 1 < len(board[t.i]):
-            neighbor = board[t.i + 1][t.j + 1]
-            if neighbor is not None:
-                tiles_to_draw_third_pass.append(([True,False,False,False], neighbor)) # Add center to bottom right neighbor
-                if (neighbor.i == len(board) - 1) or (neighbor.i < len(board) and board[neighbor.i + 1][neighbor.j] is None):
-                    tiles_to_draw_third_pass.append(([False,True,False,False], neighbor)) # Add side of corner's neighbor if it doesn't have anything to its right
-
-    # background to draw when falling tiles
-    top_right_corner_tile = curated_right_edge[len(curated_right_edge) - 1]
-    right_edge_for_background = compute_edge_side_background(all_tiles) 
-    background_to_draw = compute_side_background_to_draw(right_edge_for_background)
-
-    # draw center of bottom edge neighbors (falling tiles)
-    # draw bottom side of bottom edge (falling tiles) 
-    # draw all sides for falling tiles
-    bottom_edges = {} #dictionary : {COL_NUMBER : MOVE_WITH_TILE_OF_MAXIMUM_ROW_NUMBER}
-    for m in moves:
-        t = m.tile
-        tiles_to_draw_second_pass.append(([False,True,False,True], t)) # Add Side and Corner of falling tiles
-        if t.i not in bottom_edges:
-            bottom_edges[t.i] = m
+        # FIRST TILE
+        if last_tile is None:
+            check_left_List = [t]
         else:
-            curr_max_tile = bottom_edges[t.i].tile
-            if t.j > curr_max_tile.j:
-                bottom_edges[t.i] = m
+            # NEW LINE
+            if t.j != last_tile.j:
+                check_right_list.append(last_tile)
+                check_left_List.append(t)
+            else:
+                # GAP IN LINE
+                if t.i != last_tile.i + 1:
+                    check_right_list.append(last_tile)
+                    check_left_List.append(t)
 
-    for move in bottom_edges.values():
-        tile = move.tile
-        tiles_to_draw_second_pass.append(([False, False, True, False], tile)) #draw bottom of falling tiles
-        (dest_i,dest_j) = move.to_dest
-        if dest_j + 1 < len(board[tile.i]):
-            neighbor = board[tile.i][dest_j + 1]
-            if neighbor is not None: # useless ?
-                tiles_to_draw_third_pass.append(([True,False,False,False], neighbor)) # Add center to bottom edge neighbors
-                if (neighbor.i == len(board) - 1) or (board[neighbor.i + 1][neighbor.j] is None):
-                    tiles_to_draw_third_pass.append(([False,True,False,False], neighbor)) # Add side of bottom's neighbor if it doesn't have anything to its right
+            # LAST TILE
+            if t == all_tiles[-1]:
+                check_right_list.append(t)
+
+        if check_left_List != []:
+            for check_left in check_left_List:
+                if check_left.i > 0:
+                    n = board[check_left.i - 1][check_left.j]
+                    if n is not None:
+
+                        if not top_left_tile_found:
+                            top_left_tile_found = True
+                            if check_left.i > 0 and check_left.j > 0:
+                                tl = board[check_left.i - 1][check_left.j - 1]
+                                if tl is not None:
+                                    tiles_to_draw_first_pass.append(([False,False,False,True], tl)) # Add corner to top left neighbor
+
+                        tiles_to_draw_first_pass.append(([False,True,False,True], n)) # Add side and corner to left neighbor
+
+        if board[t.i][t.j] is not None:
+            tiles_to_draw_first_pass.append(([False,False,False,True], t)) # Add all sides of falling tile
+            tiles_to_draw_second_pass.append(([False,True,True,False], t)) # "
+            tiles_to_draw_third_pass.append(([True,False,False,False], t)) # "
+
+        if check_right_list != []:
+            for check_right in check_right_list:
+                if check_right.i + 1 < len(board):
+                    n = board[check_right.i + 1][check_right.j]
+                    if n is not None:
+                        if n.j == len(board[n.i]) - 1:
+                            tiles_to_draw_third_pass.append(([True,False,True,False], n)) # Add center and bottom of right neighbor
+                            background_to_draw.append(pygame.Rect((n.rect.left,n.rect.bottom),tile_image_side_corner)) # Add background to remove corner of previous tile border
+                        else:
+                            tiles_to_draw_third_pass.append(([True,False,False,False], n)) # Add only center of right neighbor
+                        background_to_draw.append(pygame.Rect((n.rect.left,n.rect.top),tile_image_side_corner)) # Add background to remove corner of previous tile on static right neighbor
+                    else:
+                        background_to_draw.append(pygame.Rect((check_right.rect.right, check_right.rect.top), tile_image_side_size)) # Add background of side of current tile
+                else:
+                    background_to_draw.append(pygame.Rect((check_right.rect.right, check_right.rect.top), tile_image_side_size)) # Add background of side of current tile when on edge
+                    background_to_draw.append(pygame.Rect((check_right.rect.right, check_right.rect.bottom), tile_image_side_corner)) # Add background of corner of current tile when on edge
+
+                if check_right.j == bot_edge[check_right.i]:# check corner
+                    if check_right.i + 1 < len(board) and check_right.j + 1 < len(board[check_right.i]):
+                        n_corner = board[check_right.i + 1][check_right.j + 1]
+                        if n_corner is not None:
+                            tiles_to_draw_third_pass.append(([True,False,False,False], n_corner)) # Add center of corner neighbor when tiles are falling
 
 
-    # Sort drawing order
-    tiles_to_draw_first_pass = sort_sides_to_draw(tiles_to_draw_first_pass)
-    tiles_to_draw_second_pass = sort_sides_to_draw(tiles_to_draw_second_pass)
-    tiles_to_draw_third_pass = sort_sides_to_draw(tiles_to_draw_third_pass)
+        # BOTTOM EDGE
+        if t.j == bot_edge[t.i]:
+            if t.j != len(board[t.i]) - 1: # not bottom edge of board
+                n = board[t.i][t.j + 1]
+                tiles_to_draw_third_pass.append(([True,False,False,False], n)) # Add center of bottom neighbor
+                if n.i == len(board) - 1:
+                    tiles_to_draw_third_pass.append(([False,True,False,False], n)) # Add side if tile is on edge of board
+            else: # bottom edge of board
+                background_to_draw.append(pygame.Rect((t.rect.left, t.rect.bottom), tile_image_side_bottom))
 
-    return (tiles_to_draw_first_pass + tiles_to_draw_second_pass + tiles_to_draw_third_pass, background_to_draw)
+        last_tile = t
+
+    tiles_to_draw_all_passes = tiles_to_draw_first_pass + tiles_to_draw_second_pass + tiles_to_draw_third_pass
+    return (tiles_to_draw_all_passes,background_to_draw)
+
+def print_pass(list_pass):
+    print("<><><><><> PASS <><><><><>")
+    for d in list_pass:
+        (sides,t) = d
+        res = str(t) + " sides[ "
+        if sides[0]:
+            res += "center "
+        if sides[1]:
+            res += "side "
+        if sides[2]:
+            res += "bottom "
+        if sides[3]:
+            res += "corner "
+        res += "]"
+        print (res)
+    print("<><><><><><><><><><><><><><><><>")
 
 ###
 # Populates the board with random color tiles
@@ -882,16 +869,6 @@ def display_end_screen(game_over):
     if game_over == Game_Over.LOSE:
         display_lose_screen()
 
-###
-# Draws the board on the surface
-###
-def draw_board():
-    gameDisplay.fill(background_color.value) #In lieu of picture
-    for i in range(len(board)):
-        for j in range(len(board[i])):
-            if board[i][j] is not None:
-                board[i][j].draw()
-
 def game_loop():
     game_over = Game_Over.PLAYING 
     app_running = True
@@ -950,7 +927,6 @@ def game_loop():
                     # Falling tiles
                     processing_falling_movements = not move_tiles(downward_moves, Direction.DOWN)
                     draw_tile_with_perspective(sides_to_draw)
-                    draw_moving_tiles(downward_moves)
                 if not processing_falling_movements:
                     if not processing_sliding_movements:
                         sideway_moves = compute_side_movements()
@@ -1003,5 +979,6 @@ def game_loop():
     pygame.quit()
     quit()
 
-initialize_board()
+#initialize_board()
+initialize_custom_board()
 game_loop()
