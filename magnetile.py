@@ -225,7 +225,6 @@ class Tile:
 
     def draw(self):
         self.tile_image.draw((self.rect.x, self.rect.y))
-        #pygame.draw.rect(gameDisplay, self.color.value, pygame.Rect(self.rect))
 
     def draw_all_sides(self):
         self.draw()
@@ -291,7 +290,7 @@ class Tile_Movement():
         self.to_dest = dest
 
     def __str__(self):
-        return "Movement from "+str(self.tile)+" to "+str(self.to_dest)
+        return "Movement from "+str(self.from_source)+" to "+str(self.to_dest)
 
 class Text_Button:
     x = 0
@@ -394,14 +393,14 @@ undo_button = Text_Button(display_width / 2, 25 , text_map["undo"])
 ###
 def initialize_custom_board():
     template = [
-        [Color.BLUE,        Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,    Color.BLUE,   Color.GREEN],
-        [None,        Color.GREEN,         Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
-        [None,        Color.GREEN,  Color.GREEN,  Color.GREEN,  Color.RED,     Color.YELLOW, Color.GREEN],
-        [Color.GREEN, Color.RED,    Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
-        [Color.GREEN, Color.RED,    Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
-        [None,        None,         Color.GREEN,  Color.RED,    Color.YELLOW,  Color.YELLOW, Color.GREEN],
-        [None,        Color.GREEN,  Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
-        [Color.BLUE,        Color.BLUE,   Color.BLUE,   Color.RED,    Color.BLUE,    Color.BLUE,   Color.GREEN]
+        [Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,    Color.BLUE,   Color.GREEN],
+        [None,         Color.GREEN,  Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [None,         Color.GREEN,  Color.GREEN,  Color.GREEN,  Color.RED,     Color.YELLOW, Color.GREEN],
+        [Color.GREEN,  Color.RED,    Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [Color.GREEN,  Color.RED,    Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [None,         None,         Color.GREEN,  Color.RED,    Color.YELLOW,  Color.YELLOW, Color.GREEN],
+        [None,         Color.GREEN,  Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
+        [Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.RED,    Color.BLUE,    Color.BLUE,   Color.GREEN]
     ]
     for i in range(len(template)):
         board.append([])
@@ -569,7 +568,7 @@ def move_tiles(moves, direction):
                 
     return tiles_in_place
 ###
-# Return a list of tuple representing a move like so : [(TILE, (MOVE_I, MOVE_J)), (TILE2, (MOVE2_I, MOVE2_J)), ...] or [] if no empty columns are found
+# Return a list of Tile_Movement representing the moves the tiles need to do
 ###
 def compute_side_movements():
     moves = []
@@ -604,16 +603,31 @@ def undo_step(history):
     if history == [] or history.steps == []:
         return
     last_step = history.undo_last_step()
+
+    from_list = [] # the tiles we are moving from
+    dest_list = [] # the destination of the tiles
+
     for m in last_step.neighbors_moves:
         t = m.tile
         (from_i, from_j) = m.from_source
+
+        from_list.append(m.to_dest)
+        dest_list.append(m.from_source)
+
         t.move(from_i, from_j)
         board[from_i][from_j] = t
     for t in last_step.cluster:
         board[t.i][t.j] = t
+        dest_list.append((t.i, t.j))
+
+    for coord in from_list:
+        if coord not in dest_list:
+            (i,j) = coord
+            board[i][j] = None
+
     draw_board()
 
-###
+### 
 # Checks the whole board is the game is over (won or lost)
 ###
 def check_game_over():
@@ -793,25 +807,6 @@ def compute_sides_to_draw(removed_tiles, moves):
     tiles_to_draw_all_passes = tiles_to_draw_first_pass + tiles_to_draw_second_pass + tiles_to_draw_third_pass
     return (tiles_to_draw_all_passes,background_to_draw)
 
-
-
-def print_pass(list_pass):
-    print("<><><><><> PASS <><><><><>")
-    for d in list_pass:
-        (sides,t) = d
-        res = str(t) + " sides[ "
-        if sides[0]:
-            res += "center "
-        if sides[1]:
-            res += "side "
-        if sides[2]:
-            res += "bottom "
-        if sides[3]:
-            res += "corner "
-        res += "]"
-        print (res)
-    print("<><><><><><><><><><><><><><><><>")
-
 ###
 # Populates the board with random color tiles
 ###
@@ -982,6 +977,6 @@ def game_loop():
     pygame.quit()
     quit()
 
-#initialize_board()
-initialize_custom_board()
+initialize_board()
+#initialize_custom_board()
 game_loop()
