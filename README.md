@@ -9,5 +9,9 @@ You will need Python 3 and [Pygame](https://www.pygame.org/)
 
 Simply run it with the command : 
 ```bash
-python magnetile.py
+python magnetile.py [-l language] [-c number_of_colors]
 ```
+
+The language can be either "english" or "french". Default language is English.
+
+The number of color is between 3 and 5. Default number is 5.
