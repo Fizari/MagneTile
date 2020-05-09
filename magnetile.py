@@ -27,8 +27,9 @@ number_of_color = 5
 number_of_color_min = 3
 
 def print_help():
-    print ("usage : magnetile.py [-l language]")
+    print ("usage : magnetile.py [-l language] [-c number_of_colors]")
     print ("        Languages are : french or english (default)")
+    print ("        The number of colors can be between "+str(number_of_color_min+" and "+number_of_color+" included. Default is "+number_of_color))
 
 try:
     options, remainder = getopt.getopt(sys.argv[1:],"hl:c:",["language=","--help","colors="])
@@ -414,7 +415,8 @@ def initialize_custom_board():
         [Color.GREEN,  Color.RED,    Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
         [None,         None,         Color.GREEN,  Color.RED,    Color.YELLOW,  Color.YELLOW, Color.GREEN],
         [None,         Color.GREEN,  Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
-        [Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.RED,    Color.BLUE,    Color.BLUE,   Color.GREEN]
+        [Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.RED,    Color.BLUE,    Color.BLUE,   Color.GREEN],
+        [None,         None,         None,         None,         None,          None,         Color.BLUE]
     ]
     for i in range(len(template)):
         board.append([])
@@ -777,8 +779,8 @@ def compute_sides_to_draw(removed_tiles, moves):
                         tiles_to_draw_first_pass.append(([False,True,False,True], n)) # Add side and corner to left neighbor
 
         if board[t.i][t.j] is not None:
-            tiles_to_draw_first_pass.append(([False,False,False,True], t)) # Add all sides of falling tile
-            tiles_to_draw_second_pass.append(([False,True,True,False], t)) # "
+            tiles_to_draw_first_pass.append(([False,True,False,True], t)) # Add all sides of falling tile
+            tiles_to_draw_second_pass.append(([False,False,True,False], t)) # "
             tiles_to_draw_third_pass.append(([True,False,False,False], t)) # "
 
         if check_right_list != []:
@@ -803,9 +805,10 @@ def compute_sides_to_draw(removed_tiles, moves):
                         n_corner = board[check_right.i + 1][check_right.j + 1]
                         if n_corner is not None:
                             tiles_to_draw_third_pass.append(([True,False,False,False], n_corner)) # Add center of corner neighbor when tiles are falling
+                        else:
+                            tiles_to_draw_third_pass.append(([False,True,False,False], board[check_right.i][check_right.j + 1])) # Add center of corner neighbor when tiles are falling
                     if check_right.i < len(board) and check_right.j < len(board[check_right.i]):
-                        background_to_draw.append(pygame.Rect((check_right.rect.right, check_right.rect.bottom), tile_image_side_corner))
-
+                            background_to_draw.append(pygame.Rect((check_right.rect.right, check_right.rect.bottom), tile_image_side_corner)) # Add background of old corner of static tile
         # BOTTOM EDGE
         if t.j == bot_edge[t.i]:
             if t.j != len(board[t.i]) - 1: # not bottom edge of board
@@ -814,7 +817,7 @@ def compute_sides_to_draw(removed_tiles, moves):
                 if n.i == len(board) - 1:
                     tiles_to_draw_third_pass.append(([False,True,False,False], n)) # Add side if tile is on edge of board
             else: # bottom edge of board
-                background_to_draw.append(pygame.Rect((t.rect.left, t.rect.bottom), tile_image_side_bottom))
+                background_to_draw.append(pygame.Rect((t.rect.left, t.rect.bottom), tile_image_side_bottom)) # Add background of bottom side of removed tiles when on edge
 
         last_tile = t
 
