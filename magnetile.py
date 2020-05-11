@@ -65,6 +65,8 @@ for opt, arg in options:
 seed(time.time())
 fps = 60
 
+root_dir = os.path.dirname(os.path.realpath(__file__))
+
 display_width = 850
 display_height = 720
 
@@ -89,7 +91,7 @@ class Color(enum.Enum):
     PURPLE = (182, 3, 252)
     ORANGE = (250, 183, 0)
     DARK_BLUE = (46, 50, 128)
-
+    
 side_width = 10
 bottom_height = 10
 tile_image_center_size = (tile_width, tile_height)
@@ -98,34 +100,34 @@ tile_image_side_bottom = (tile_width, bottom_height)
 tile_image_side_corner = (side_width, bottom_height)
 tiles_images = {
     Color.RED : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join("images", "flower_tile.png")), tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "flower_tile.png")), tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
         },
     Color.GREEN : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join("images", "bike_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "bike_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
         },
     Color.BLUE : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join("images", "cat_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "cat_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
         },
     Color.YELLOW : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join("images", "sun_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "sun_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
         },
     Color.PURPLE : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join("images", "choco_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join("images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "choco_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
         }
 }
 
