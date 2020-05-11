@@ -6,6 +6,7 @@ import enum
 import pygame
 from random import seed
 from random import randint
+from random import random
 
 french_text_map = {
     "undo" : "Annuler",
@@ -65,7 +66,7 @@ seed(time.time())
 fps = 60
 
 display_width = 850
-display_height = 750
+display_height = 720
 
 tile_width = 45
 tile_height = int(1.6*tile_width)
@@ -86,6 +87,8 @@ class Color(enum.Enum):
     BLUE = (119, 160, 237)
     YELLOW = (237, 215, 119)
     PURPLE = (182, 3, 252)
+    ORANGE = (250, 183, 0)
+    DARK_BLUE = (46, 50, 128)
 
 side_width = 10
 bottom_height = 10
@@ -126,7 +129,7 @@ tiles_images = {
         }
 }
 
-background_color = Color.WHITE
+background_color = Color.DARK_BLUE
 
 ###
 # Picks a random color
@@ -830,11 +833,72 @@ def compute_sides_to_draw(removed_tiles, moves):
 def initialize_board():
     global board
     board = []
+
+    color_count = {}
+    for c in colors_rand_arr[:number_of_color]:
+        color_count[c] = 0
+    color_count_total = 0
+    chance_cluster = 0.25 # chance of to be of the same color of either the left neighbor or the last tile
+
+    last_color = get_random_color()
+
     for i in range(board_col_nb):
         board.append([])
         for j in range(board_row_nb):
-            new_tile = Tile(i,j,get_random_color())
+            left_neighbor = None
+            if i > 0:
+                left_neighbor = board[i - 1][j]
+
+            r = random()
+            color = None
+            if r < chance_cluster:
+
+                if left_neighbor is not None:
+                    r_cluster = random()
+                    if r_cluster <= 0.5:
+                        color = last_color
+                    else:
+                        color = left_neighbor.color
+                else:
+                    color = last_color
+            else:
+                enough_colors = True
+
+                for k in color_count.keys():
+                    if color_count[k] == 0:
+                        enough_colors = False
+                        break
+
+                if enough_colors:
+                    chance_color = {}
+                    cumul = 0
+                    count_last_color = color_count[last_color]
+
+                    for k in color_count.keys():
+                        if k != last_color:
+                            total = (color_count_total - count_last_color)
+                            ratio = color_count[k] / total
+                            chance_color[k] = ((1 - ratio) / (number_of_color - 2)) + cumul # invert he ratio of tiles on the board to get corresponding chances
+                            cumul = chance_color[k]
+
+                    r2 = random()
+                    last_threshold = 0
+                    for k in chance_color.keys():
+                        if r2 >= last_threshold and r2 < chance_color[k]:
+                            color = k
+                            break
+
+                else:
+                    color = get_random_color()
+                
+            color_count[color] += 1
+            color_count_total += 1
+
+            new_tile = Tile(i,j,color)
+            last_color = color
+
             board[i].append(new_tile)
+
     if check_game_over() == Game_Over.LOSE: # prevents generation with no clusters
         initialize_board()
 
