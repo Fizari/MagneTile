@@ -3,10 +3,15 @@ import os
 import getopt
 import time
 import enum
-import pygame
 from random import seed
 from random import randint
 from random import random
+
+try:
+    import pygame
+except ModuleNotFoundError:
+    print("### Please install pygame : pip install pygame ###")
+    raise
 
 french_text_map = {
     "undo" : "Annuler",
@@ -98,36 +103,37 @@ tile_image_center_size = (tile_width, tile_height)
 tile_image_side_size = (side_width, tile_height)
 tile_image_side_bottom = (tile_width, bottom_height)
 tile_image_side_corner = (side_width, bottom_height)
+images_folder = "images"
 tiles_images = {
     Color.RED : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "flower_tile.png")), tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "flower_tile.png")), tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
         },
     Color.GREEN : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "bike_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "bike_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
         },
     Color.BLUE : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "cat_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "cat_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
         },
     Color.YELLOW : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "sun_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "sun_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
         },
     Color.PURPLE : {
-        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "choco_tile.png")),tile_image_center_size),
-        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_side.png")), tile_image_side_size),
-        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_bottom.png")), tile_image_side_bottom),
-        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, "images", "tile_corner.png")),tile_image_side_corner),
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "choco_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir,images_folder, "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
         }
 }
 
@@ -145,38 +151,6 @@ pygame.init()
 gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('MagneTile')
 clock = pygame.time.Clock()
-
-class Custom_Range:
-    start = 0
-    end = 0
-    length = 0
-
-    def __init__(self, start, end):
-        self.start = start if start <= end else end 
-        self.end = end if start <= end else start 
-        self.length = self.end - self.start
-
-    def is_overlaping(self, o_range):
-        res = False
-        if self.start < o_range.start:
-            if o_range.start <= self.end:
-                res = True
-        else:
-            if self.start <= o_range.end:
-                res = True
-        return res
-
-    def union(self, o_range):
-        if self.is_overlaping(o_range):
-            return Custom_Range(min(self.start, o_range.start), max(self.end, o_range.end))
-        else:
-            return None
-
-    def get_range(self):
-        return range(self.start, self.end + 1)
-
-    def __str__(self):
-        return "("+str(self.start)+","+str(self.end)+")"
 
 class Tile_Image(pygame.sprite.Sprite):
     """ Represents a tile image to be displayed on screen"""
@@ -830,7 +804,7 @@ def compute_sides_to_draw(removed_tiles, moves):
     return (tiles_to_draw_all_passes,background_to_draw)
 
 ###
-# Populates the board with random color tiles
+# Populates the board with a controlled randomized generation of tiles
 ###
 def initialize_board():
     global board
@@ -1009,6 +983,7 @@ def game_loop():
                     processing_falling_movements = not move_tiles(downward_moves, Direction.DOWN)
                     draw_tile_with_perspective(sides_to_draw)   
                 if not processing_falling_movements:
+
                     if not processing_sliding_movements:
                         sideway_moves = compute_side_movements()
                         if sideway_moves != []:
