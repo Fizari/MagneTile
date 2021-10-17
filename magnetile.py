@@ -35,7 +35,7 @@ number_of_color_min = 3
 def print_help():
     print ("usage : magnetile.py [-l language] [-c number_of_colors]")
     print ("        Languages are : french or english (default)")
-    print ("        The number of colors can be between "+str(number_of_color_min+" and "+number_of_color+" included. Default is "+number_of_color))
+    print ("        The number of colors can be between "+str(number_of_color_min)+" and "+str(number_of_color)+" included. Default is "+str(number_of_color))
 
 try:
     options, remainder = getopt.getopt(sys.argv[1:],"hl:c:",["language=","--help","colors="])
