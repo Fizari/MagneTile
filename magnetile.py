@@ -31,7 +31,7 @@ english_text_map = {
 
 text_map = english_text_map
 
-number_of_color = 5
+number_of_color = 6
 number_of_color_min = 3
 
 def print_help():
@@ -74,12 +74,18 @@ fps = 60
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
 
-display_width = 850
+#display_width = 850
+#display_height = 720
+
+display_width = 1100
 display_height = 720
 
 tile_width = 45
 tile_height = int(1.6*tile_width)
-board_col_nb = 18
+#board_col_nb = 18
+#board_row_nb = 9
+
+board_col_nb = 22
 board_row_nb = 9
 
 tool_bar_height = 50
@@ -95,7 +101,8 @@ class Color(enum.Enum):
     GREEN = (119, 237, 131)
     BLUE = (119, 160, 237)
     YELLOW = (237, 215, 119)
-    PURPLE = (182, 3, 252)
+    BROWN = (156, 107, 78)
+    PURPLE = (166, 59, 211)
     ORANGE = (250, 183, 0)
     DARK_BLUE = (46, 50, 128)
     
@@ -131,8 +138,14 @@ tiles_images = {
         "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
         "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
         },
-    Color.PURPLE : {
+    Color.BROWN : {
         "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "choco_tile.png")),tile_image_center_size),
+        "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir,images_folder, "tile_side.png")), tile_image_side_size),
+        "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
+        "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
+        },
+    Color.PURPLE : {
+        "center" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "spaceship_tile.png")),tile_image_center_size),
         "side" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir,images_folder, "tile_side.png")), tile_image_side_size),
         "bottom" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_bottom.png")), tile_image_side_bottom),
         "corner" : pygame.transform.scale(pygame.image.load(os.path.join(root_dir, images_folder, "tile_corner.png")),tile_image_side_corner),
@@ -144,7 +157,7 @@ background_color = Color.DARK_BLUE
 ###
 # Picks a random color
 ###
-colors_rand_arr = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.PURPLE]
+colors_rand_arr = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.BROWN, Color.PURPLE]
 def get_random_color():
     r = randint(0, number_of_color - 1)
     return colors_rand_arr[r]
@@ -995,7 +1008,6 @@ def game_loop():
             if not (processing_falling_movements or processing_sliding_movements) :
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
-                    #print("MOUSE DOWN")
                     clicked_tile = get_tile_from_coord(pos)
                     if clicked_tile is not None:
                         tile_on_mouse_down = clicked_tile
