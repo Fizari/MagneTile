@@ -17,14 +17,16 @@ french_text_map = {
     "undo" : "Annuler",
     "restart" : "Rejouer",
     "you_won" : "Vous avez gagné !! :)",
-    "you_lost" : "Vous avez perdu"
+    "you_lost" : "Vous avez perdu",
+    "tile_count" : "Tuiles : "
 }
 
 english_text_map = {
     "undo" : "Undo",
     "restart" : "Play again",
     "you_won" : "You won !! :)",
-    "you_lost" : "You lost"
+    "you_lost" : "You lost",
+    "tile_count" : "Tiles : "
 }
 
 text_map = english_text_map
@@ -286,6 +288,43 @@ class Tile_Movement():
     def __str__(self):
         return "Movement from "+str(self.from_source)+" to "+str(self.to_dest)
 
+class Text_Display:
+    """ Represents a non clickable text without background """
+    x = 0
+    y = 0
+    rect = pygame.Rect(0,0,0,0)
+    text_render = None
+
+    text_color = Color.BLACK.value
+    font_name = 'Comic Sans MS'
+    font_size = 30
+
+    def __init__(self, x, y, text, text_color=Color.BLACK.value, font_name='Comic Sans MS', font_size=30):
+        """ (x,y) are the coordinates of the text's center"""
+        text_font = pygame.font.SysFont(font_name, font_size)
+        self.text_render = text_font.render(text, True, text_color)
+        width = self.text_render.get_rect().width
+        height = self.text_render.get_rect().height
+        self.text_color = text_color
+        self.font_name = font_name
+        self.font_size = font_size
+        self.x = x - width / 2
+        self.y = y - height / 2
+        self.rect = pygame.Rect(self.x,self.y,width,height)
+
+    def draw(self):
+        gameDisplay.blit(self.text_render,(self.x,self.y))
+
+    def update(self, text):
+        text_font = pygame.font.SysFont(self.font_name, self.font_size)
+        self.text_render = text_font.render(text, True, self.text_color)
+
+    def update_and_draw(self, text, background_color=None):
+        if (background_color):
+            pygame.draw.rect(gameDisplay, background_color, self.rect)
+        self.update(text)
+        self.draw()
+
 class Text_Button:
     x = 0
     y = 0
@@ -309,10 +348,10 @@ class Text_Button:
         self.rect = pygame.Rect(self.x,self.y,width,height)
 
     def __draw_border(self):
-        border_with = self.rect.width + self.border_thickness * 8 + self.border_padding * 2
+        border_width = self.rect.width + self.border_thickness * 8 + self.border_padding * 2
         border_height = self.rect.height +  self.border_thickness * 2
 
-        border_rect = pygame.Rect((self.x - self.border_thickness *4 - self.border_padding, self.y - self.border_thickness),(border_with, border_height))
+        border_rect = pygame.Rect((self.x - self.border_thickness *4 - self.border_padding, self.y - self.border_thickness),(border_width, border_height))
         mask_rect = pygame.Rect((border_rect.x + self.border_thickness *4, border_rect.y + self.border_thickness),(border_rect.width - self.border_thickness * 8, border_rect.height - self.border_thickness * 2))
         pygame.draw.rect(gameDisplay, self.border_color, pygame.Rect(border_rect))
         pygame.draw.rect(gameDisplay, self.background_color, pygame.Rect(mask_rect))
@@ -381,6 +420,8 @@ class Perspective(enum.Enum):
 board = []
 restart_button = Text_Button(display_width / 2, display_height / 2 , text_map["restart"])
 undo_button = Text_Button(display_width / 2, 25 , text_map["undo"])
+tile_count_text = Text_Display(60, 25, text_map["tile_count"], Color.WHITE.value)
+tile_count_number = Text_Display(tile_count_text.rect.width + tile_count_text.x + 45, 25, text_map["tile_count"], Color.WHITE.value)
 
 ###
 # TEMPORARY for testing
@@ -406,14 +447,19 @@ def initialize_custom_board():
                 board[i].append(Tile(i,j, template[i][j])) 
 
 ###
-# Draws the board on the surface
+# Draws the whole board on the surface
 ###
 def draw_board():
+    tile_count = 0
     gameDisplay.fill(background_color.value) 
     for i in range(len(board)):
         for j in range(len(board[i])):
             if board[i][j] is not None:
                 board[i][j].draw_all_sides()
+                tile_count += 1
+    tile_count_text.draw()
+    undo_button.draw()
+    tile_count_number.update_and_draw(str(tile_count),background_color.value)
 
 ###
 # Get the tile that matches the coordinates, or None if no tiles are found 
@@ -485,7 +531,7 @@ def get_tile_same_color_neighbors(tile):
 
 connected_neighbors = set()
 ###
-# Depth first search algoritm to get the tiles of the sale color
+# Depth first search algoritm to get the tiles of the same color
 ###
 def dfs(visited, tile):
     if tile not in visited:
@@ -596,7 +642,7 @@ def draw_background_tiles(bg_to_draw):
 ###
 def undo_step(history):
     if history == [] or history.steps == []:
-        return
+        return None
     last_step = history.undo_last_step()
 
     from_list = [] # the tiles we are moving from
@@ -621,6 +667,7 @@ def undo_step(history):
             board[i][j] = None
 
     draw_board()
+    return last_step
 
 ### 
 # Checks the whole board is the game is over (won or lost)
@@ -935,10 +982,10 @@ def game_loop():
     sides_to_draw = []
     downward_moves = {}
     sideway_moves = []
+    tile_count = board_col_nb * board_row_nb
     history = History()
     draw_board()
     while app_running:
-        undo_button.draw()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -966,16 +1013,21 @@ def game_loop():
                                 bg_to_draw.append(board[c.i][c.j].rect)
                                 board[c.i][c.j] = None
                             history.add_new_step(connected_tiles)
+                            tile_count -= len(connected_tiles)
                             processing_falling_movements = True
                             # Compute first time falling tiles
                             downward_moves = compute_downward_movements(connected_tiles)
                             bg_to_draw = bg_to_draw + compute_background_to_draw(downward_moves)
                             (sides_to_draw, side_bg_to_draw) = compute_sides_to_draw(connected_tiles, downward_moves)
                             bg_to_draw += side_bg_to_draw
+                            # Update tile count
+                            tile_count_number.update_and_draw(str(tile_count),background_color.value)
 
                     if undo_button.collides_with(pos) and button_on_mouse_down == undo_button:
                         button_on_mouse_down = None
-                        undo_step(history)
+                        last_hist_step = undo_step(history)
+                        if (last_hist_step):
+                            tile_count += len(last_hist_step.cluster)
             else:
                 draw_background_tiles(bg_to_draw)
                 if processing_falling_movements and not processing_sliding_movements:
@@ -1018,11 +1070,14 @@ def game_loop():
                     # Restarts the game
                     initialize_board()
                     draw_board()
+                    tile_count = board_col_nb * board_row_nb
                     history = History()
                     game_over = Game_Over.PLAYING
                 if undo_button.collides_with(pos) and button_on_mouse_down == undo_button:
                     # Undo last step
-                    undo_step(history)
+                    last_hist_step = undo_step(history)
+                    if (last_hist_step):
+                        tile_count += len(last_hist_step.cluster)
                     game_over = Game_Over.PLAYING
 
                 button_on_mouse_down = None
