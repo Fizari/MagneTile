@@ -995,6 +995,7 @@ def game_loop():
             if not (processing_falling_movements or processing_sliding_movements) :
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
+                    #print("MOUSE DOWN")
                     clicked_tile = get_tile_from_coord(pos)
                     if clicked_tile is not None:
                         tile_on_mouse_down = clicked_tile
@@ -1005,7 +1006,11 @@ def game_loop():
                 if event.type == pygame.MOUSEBUTTONUP:
                     pos = pygame.mouse.get_pos()
                     clicked_tile = get_tile_from_coord(pos)
-                    if clicked_tile is not None and clicked_tile == tile_on_mouse_down:
+                    #print("DEBUG tile_mouse_down : " + str(tile_on_mouse_down.i) + "," + str(tile_on_mouse_down.j) ) if tile_on_mouse_down else print("DEBUG tile_on_mouse_down is None")
+                    #print("DEBUG clicked tile : " + str(clicked_tile.i) + "," + str(clicked_tile.j) ) if clicked_tile else print("DEBUG clicked_tile is None")
+                    connected_tiles_mouse_down = get_connected_tiles(tile_on_mouse_down) if tile_on_mouse_down and clicked_tile else []
+                    same_cluster = next((t for t in connected_tiles_mouse_down if t.i == clicked_tile.i and t.j == clicked_tile.j), None)
+                    if clicked_tile is not None and same_cluster:
                         tile_on_mouse_down = None
                         connected_tiles = get_connected_tiles(clicked_tile)
                         if len(connected_tiles) > 1:
