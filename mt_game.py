@@ -1,5 +1,5 @@
 from mt_board import Board
-from mt_enums import Color, Game_Over, Image_Section
+from mt_enums import Color, Game_State, Image_Section
 from mt_tile import Tile_Image_Element, Tile
 import os
 try:
@@ -99,6 +99,7 @@ class Game:
     clock = None
     game_images = None
     language = None
+    game_state = None
 
     display_width = 1100
     display_height = 720
@@ -107,8 +108,8 @@ class Game:
     tool_bar_height = 50
     tile_width = 45
     tile_height = int(1.6*tile_width)
-
-    background_color = Color.DARK_BLUE
+    fps = 60
+    background_color = Color.BACKGROUND
 
     score = 0
 
@@ -120,6 +121,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.game_images = Game_Images()
         self.language = Game_Language()
+        self.game_state = Game_State.PLAYING
 
     def set_language_to_french(self):
         language.set_to_french()
@@ -160,8 +162,28 @@ class Game:
         self.draw_board()
         pygame.display.update()
 
+        cpt = 0
         app_running = True
         while app_running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     app_running = False
+
+            if (self.game_state == Game_State.PLAYING):
+
+                if not self.board.is_processing_movements():
+
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        mouse_pos = pygame.mouse.get_pos()
+                        if self.board.is_clicked(mouse_pos): # board click
+                            cpt += 1
+                            print("clicking on board " + str(cpt))
+
+                else:
+                    print("Processing movements")
+
+
+            else: # GAME OVER
+                print("game over")
+            self.clock.tick(self.fps)
+

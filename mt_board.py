@@ -16,12 +16,24 @@ class Board:
     tile_count = 0
     color_nb = 0
 
+    processing_falling_movements = False
+    processing_sliding_movements = False
+
+    board_coord = (0,0)
+    board_width = 0 
+    board_height = 0
+
+    tile_on_mouse_down = None
+
     """ Represents the board of the game (2D array of tiles) """
     def __init__(self, color_nb, col_nb, row_nb, tile_width, tile_height, offset_x, offset_y):
         self.row_nb = row_nb
         self.col_nb = col_nb
         self.color_nb = color_nb
         self.board = []
+        self.board_coord = (offset_x, offset_y)
+        self.board_width = col_nb * tile_width
+        self.board_height = row_nb * tile_height
         #self.initialize_custom(tile_width, tile_height, offset_x, offset_y)
         self.initialize_random(color_nb, col_nb, row_nb, tile_width, tile_height, offset_x, offset_y)
         # seed random number generator
@@ -148,3 +160,113 @@ class Board:
                     tie_list += self.board[i][j].get_tie_all_sides()
         return tie_list
 
+    def is_processing_movements(self):
+        return self.processing_falling_movements or self.processing_sliding_movements
+
+    def is_clicked(self, mouse_coord):
+        (mouse_x, mouse_y) = mouse_coord
+        (board_x, board_y) = self.board_coord
+        return mouse_x >= board_x and mouse_y >= board_y and mouse_x <= (board_x + self.board_width) and mouse_y <= (board_y + self.board_height)
+    
+    ###
+    # Get the neighbors of a tile that are of the same color
+    ###
+    def get_tile_same_color_neighbors(self, tile):
+        i = tile.i
+        j = tile.j
+
+        n = []
+        coord_to_check = []
+
+        if i > 0:
+            if i < len(self.board) - 1:
+                if j > 0:
+                    if j < len(self.board[0]) - 1:
+                        coord_to_check.append((i,j-1))
+                        coord_to_check.append((i,j+1))
+                        coord_to_check.append((i-1,j))
+                        coord_to_check.append((i+1,j))
+                    else:
+                        coord_to_check.append((i,j-1))
+                        coord_to_check.append((i-1,j))
+                        coord_to_check.append((i+1,j))
+                else:
+                    coord_to_check.append((i,j+1))
+                    coord_to_check.append((i-1,j))
+                    coord_to_check.append((i+1,j))
+            else:
+                if j > 0:
+                    if j < len(self.board[0]) - 1:
+                        coord_to_check.append((i,j-1))
+                        coord_to_check.append((i,j+1))
+                        coord_to_check.append((i-1,j))
+                    else:
+                        coord_to_check.append((i,j-1))
+                        coord_to_check.append((i-1,j))
+                else:
+                    coord_to_check.append((i,j+1))
+                    coord_to_check.append((i-1,j))
+        else:
+            if j > 0:
+                    if j < len(self.board[0]) - 1:
+                        coord_to_check.append((i,j-1))
+                        coord_to_check.append((i,j+1))
+                        coord_to_check.append((i+1,j))
+                    else:
+                        coord_to_check.append((i,j-1))
+                        coord_to_check.append((i+1,j))
+            else:
+                coord_to_check.append((i,j+1))
+                coord_to_check.append((i+1,j))
+
+        for c in coord_to_check:
+            tile_to_check = self.board[c[0]][c[1]]
+            if tile_to_check and tile_to_check.color == tile.color:
+                n.append(tile_to_check)
+
+        return n
+
+    ###
+    # Depth first search algoritm to get the tiles of the same color
+    ###
+    connected_neighbors = set()
+    def dfs(visited, tile):
+        if tile not in visited:
+            visited.add(tile)
+            self.connected_neighbors.add(tile)
+            for neighbour in self.get_tile_same_color_neighbors(tile):
+                dfs(visited, neighbour)
+
+    def get_connected_tiles(self, tile):
+        self.connected_neighbors = set()
+        dfs(set(),tile)
+        return self.connected_neighbors
+
+    def process_click_mouse_down(self, mouse_coord):
+        clicked_tile = get_tile_from_coord(mouse_coord)
+        if clicked_tile is not None:
+            self.tile_on_mouse_down = clicked_tile
+
+    def process_click_mouse_up(self, mouse_coord):
+        clicked_tile = get_tile_from_coord(mouse_coord)
+        #print("DEBUG tile_mouse_down : " + str(tile_on_mouse_down.i) + "," + str(tile_on_mouse_down.j) ) if tile_on_mouse_down else print("DEBUG tile_on_mouse_down is None")
+        #print("DEBUG clicked tile : " + str(clicked_tile.i) + "," + str(clicked_tile.j) ) if clicked_tile else print("DEBUG clicked_tile is None")
+        connected_tiles_mouse_down = self.get_connected_tiles(self.tile_on_mouse_down) if self.tile_on_mouse_down and clicked_tile else []
+        same_cluster = next((t for t in connected_tiles_mouse_down if t.i == clicked_tile.i and t.j == clicked_tile.j), None)
+        if clicked_tile and same_cluster:
+            self.tile_on_mouse_down = None
+            connected_tiles = connected_tiles_mouse_down
+            if len(connected_tiles) > 1:
+                for c in connected_tiles:
+                    bg_to_draw.append(self.board[c.i][c.j].rect)
+                    board[c.i][c.j] = None
+                history.add_new_step(connected_tiles)
+                tile_count -= len(connected_tiles)
+                processing_falling_movements = True
+                # Compute first time falling tiles
+                downward_moves = compute_downward_movements(connected_tiles)
+                bg_to_draw = bg_to_draw + compute_background_to_draw(downward_moves)
+                (sides_to_draw, side_bg_to_draw) = compute_sides_to_draw(connected_tiles, downward_moves)
+                bg_to_draw += side_bg_to_draw
+                # Update tile count
+                tile_count_number.update_and_draw(str(tile_count),background_color.value)

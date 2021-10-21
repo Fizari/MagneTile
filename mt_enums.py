@@ -11,8 +11,11 @@ class Color(enum.Enum):
     PURPLE = (166, 59, 211)
     ORANGE = (250, 183, 0)
     DARK_BLUE = (46, 50, 128)
+    LIGHT_BLUE = (126, 200, 224)
 
-class Game_Over(enum.Enum):
+    BACKGROUND = (191, 203, 219)
+
+class Game_State(enum.Enum):
    WIN = 1
    LOSE = 2
    PLAYING = 3
