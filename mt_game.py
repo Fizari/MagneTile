@@ -162,7 +162,6 @@ class Game:
         self.draw_board()
         pygame.display.update()
 
-        cpt = 0
         app_running = True
         while app_running:
             for event in pygame.event.get():
@@ -176,8 +175,12 @@ class Game:
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         mouse_pos = pygame.mouse.get_pos()
                         if self.board.is_clicked(mouse_pos): # board click
-                            cpt += 1
-                            print("clicking on board " + str(cpt))
+                            self.board.process_click_mouse_down(mouse_pos)
+
+                    if event.type == pygame.MOUSEBUTTONUP:
+                        mouse_pos = pygame.mouse.get_pos()
+                        if self.board.is_clicked(mouse_pos): # board click
+                            self.board.process_click_mouse_up(mouse_pos)
 
                 else:
                     print("Processing movements")

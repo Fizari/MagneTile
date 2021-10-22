@@ -1,9 +1,17 @@
-try:
-    import pygame
-except ModuleNotFoundError:
-    print("### Please install pygame : pip install pygame ###")
-    raise
 from mt_enums import Color, Image_Section
+
+class Solid_Color_Image:
+
+    color = None
+    coord = (0,0)
+    width = 0 
+    height = 0
+
+    def __init__(self, color, coord, width, height):
+        self.color = color
+        self.coord = coord
+        self.width = width
+        self.height = height
 
 class Tile_Image_Element:
     """ Represents the part of the tile that needs to be drawn on the screen """
@@ -22,9 +30,9 @@ class Tile:
     y_offset = 0
     i = 0
     j = 0
+    coord = (0,0) # coordinates on the screen 
     tile_width = 0
     tile_height = 0
-    rect = pygame.Rect(0,0,0,0)
     color = None # /!\ Color enum (not Tuple)
     speed = 6 # speed when drawing
     k = 1.05 # acceleration factor
@@ -38,8 +46,28 @@ class Tile:
         self.tile_height= tile_height
         x = i*tile_width + self.x_offset
         y = j*tile_height + self.y_offset
-        self.rect = pygame.Rect((x,y),(tile_width, tile_height))
+        self.coord = (x,y)
         self.color = color
+
+    def get_x(self):
+        (curr_x, curr_y) = self.coord
+        return curr_x
+
+    def get_y(self):
+        (curr_x, curr_y) = self.coord
+        return curr_y
+
+    def get_pos_left(self):
+        return self.get_x()
+
+    def get_pos_right(self):
+        return self.get_x() + self.tile_width
+
+    def get_pos_top(self):
+        return self.get_y()
+
+    def get_pos_bottom(self):
+        return self.get_y() + self.tile_height
 
     def get_supposed_coord(self):
         return (self.i*self.tile_width + self.x_offset, self.j*self.tile_height + self.y_offset)
@@ -52,11 +80,12 @@ class Tile:
         self.j = j
         x = i*self.tile_width + self.x_offset
         y = j*self.tile_height + self.y_offset
-        self.rect = pygame.Rect((x,y),(self.tile_width, self.tile_height))
+        self.coord = (x,y)
 
     def is_in_place(self):
-        (x,y) = self.get_coord_from_grid_pos()
-        return self.rect.x == x and self.rect.y == y
+        (curr_x,curr_y) = self.coord
+        (supposed_x, supposed_y) = self.get_coord_from_grid_pos()
+        return curr_x == supposed_x and curr_y == supposed_y
 
     def __accelerate(self):
         self.speed *= self.k
@@ -65,44 +94,46 @@ class Tile:
         self.speed = 6
 
     def fall_to(self, i, j):
-        (x,y) = self.get_coord_from_grid_pos(i,j)
-        """Draws the tile falling toward (i,j), only the rectangle that represent the tile is moving, not the (i,j) coordinates"""
-        if self.rect.y + self.speed >= y:
+        """Draws the tile falling toward (i,j), only the coordinates of the tile are moving, not the (i,j) coordinates"""
+        (curr_x, curr_y) = self.coord
+        (dest_x, dest_y) = self.get_coord_from_grid_pos(i,j)
+        if curr_y + self.speed >= dest_y:
             self.__stop_speed()
             return True
         else:
-            curr_x = self.rect.x
-            curr_y = self.rect.y
             self.__accelerate()
-            self.rect = pygame.Rect((curr_x,curr_y + self.speed),(self.tile_width, self.tile_height))
+            self.coord = (curr_x,curr_y + self.speed)
             return False
 
     def slide_left_to(self, i, j):
         """Draws the tile sliding left toward (i,j), same as fall_to(self, i, j)"""
-        (x,y) = self.get_coord_from_grid_pos(i,j)
-        if self.rect.x - self.speed <= x:
+        (curr_x, curr_y) = self.coord
+        (dest_x, dest_y) = self.get_coord_from_grid_pos(i,j)
+        if curr_x - self.speed <= dest_x:
             return True
         else:
-            curr_x = self.rect.x
-            curr_y = self.rect.y
-            self.rect = pygame.Rect((curr_x - self.speed,curr_y),(self.tile_width, self.tile_height))
+            self.coord = (curr_x - self.speed,curr_y)
             return False
 
     def get_tie_center(self):
         ### tie = tile_image_element ###
-        return Tile_Image_Element(self.color, Image_Section.CENTER, self.rect.x, self.rect.y)
+        (x,y) = self.coord
+        return Tile_Image_Element(self.color, Image_Section.CENTER, x, y)
 
     def get_tie_side(self):
         ### tie = tile_image_element ###
-        return Tile_Image_Element(self.color, Image_Section.SIDE, self.rect.right, self.rect.y) 
+        (x,y) = self.coord
+        return Tile_Image_Element(self.color, Image_Section.SIDE, x + self.tile_width, y) 
 
     def get_tie_bottom(self):
         ### tie = tile_image_element ###
-        return Tile_Image_Element(self.color, Image_Section.BOTTOM, self.rect.x, self.rect.bottom) 
+        (x,y) = self.coord
+        return Tile_Image_Element(self.color, Image_Section.BOTTOM, x, y + self.tile_height) 
 
     def get_tie_corner(self):
         ### tie = tile_image_element ###
-        return Tile_Image_Element(self.color, Image_Section.CORNER, self.rect.right, self.rect.bottom) 
+        (x,y) = self.coord
+        return Tile_Image_Element(self.color, Image_Section.CORNER, x + self.tile_width, y + self.tile_height) 
 
     def get_tie_all_sides(self):
         tie_list = []
@@ -111,6 +142,11 @@ class Tile:
         tie_list.append(self.get_tie_bottom())
         tie_list.append(self.get_tie_corner())
         return tie_list
+
+    def is_clicked(self, mouse_coord):
+        (mouse_x, mouse_y) = mouse_coord
+        (x, y) = self.coord
+        return mouse_x >= x and mouse_y >= y and mouse_x <= (x + self.tile_width) and mouse_y <= (y + self.tile_height)
 
     def  __str__(self):
         return "TILE("+str(self.i)+","+str(self.j)+")"

@@ -1,6 +1,8 @@
+#from mt_tile import Tile_Movement
+
 class History_Step:
     cluster = []
-    neighbors_moves = [] #Tile_Movement list
+    neighbors_moves = [] # Tile_Movement list
 
     def __init__(self, cluster):
         self.cluster = cluster
