@@ -40,55 +40,64 @@ class Game_Language:
 class Game_Images:
     ### Images that are gonna be drawn on the screen ###
     tiles_images = None
-
-    tile_width = 45
-    tile_height = int(1.6*tile_width)
     side_width = 10
     bottom_height = 10
-    tile_image_center_size = (tile_width, tile_height)
-    tile_image_side_size = (side_width, tile_height)
-    tile_image_bottome_size = (tile_width, bottom_height)
-    tile_image_corner_size = (side_width, bottom_height)
     images_folder = "images"
     root_dir = os.path.dirname(os.path.realpath(__file__))
 
+    # map to get the correct size of the background to draw
+    bg_size_map = None
+
     def __init__(self):
+
+        tile_image_center_size = (Tile.TILE_WIDTH, Tile.TILE_HEIGHT)
+        tile_image_side_size = (self.side_width, Tile.TILE_HEIGHT)
+        tile_image_bottom_size = (Tile.TILE_WIDTH, self.bottom_height)
+        tile_image_corner_size = (self.side_width, self.bottom_height)
+
+        self.bg_size_map = {
+            Image_Section.CENTER : (Tile.TILE_WIDTH, Tile.TILE_HEIGHT),
+            Image_Section.SIDE : (self.side_width, Tile.TILE_HEIGHT),
+            Image_Section.BOTTOM : (Tile.TILE_WIDTH, self.bottom_height),
+            Image_Section.CORNER : (self.side_width, self.bottom_height)
+        }
+
         self.tiles_images = {
             Color.RED : {
-                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "flower_tile.png")), self.tile_image_center_size),
-                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), self.tile_image_side_size),
-                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), self.tile_image_bottome_size),
-                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")),self.tile_image_corner_size),
+                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "flower_tile.png")), tile_image_center_size),
+                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), tile_image_side_size),
+                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), tile_image_bottom_size),
+                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")),tile_image_corner_size),
                 },
             Color.GREEN : {
-                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "bike_tile.png")),self.tile_image_center_size),
-                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), self.tile_image_side_size),
-                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), self.tile_image_bottome_size),
-                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")),self.tile_image_corner_size),
+                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "bike_tile.png")), tile_image_center_size),
+                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), tile_image_side_size),
+                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), tile_image_bottom_size),
+                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")), tile_image_corner_size),
                 },
             Color.BLUE : {
-                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "cat_tile.png")),self.tile_image_center_size),
-                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), self.tile_image_side_size),
-                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), self.tile_image_bottome_size),
-                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")),self.tile_image_corner_size),
+                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "cat_tile.png")), tile_image_center_size),
+                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), tile_image_side_size),
+                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), tile_image_bottom_size),
+                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")), tile_image_corner_size),
                 },
             Color.YELLOW : {
-                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "sun_tile.png")),self.tile_image_center_size),
-                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), self.tile_image_side_size),
-                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), self.tile_image_bottome_size),
-                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")),self.tile_image_corner_size),
+                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "sun_tile.png")), tile_image_center_size),
+                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_side.png")), tile_image_side_size),
+                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), tile_image_bottom_size),
+                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")), tile_image_corner_size),
                 },
             Color.BROWN : {
-                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "choco_tile.png")),self.tile_image_center_size),
-                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir,self.images_folder, "tile_side.png")), self.tile_image_side_size),
-                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), self.tile_image_bottome_size),
-                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")),self.tile_image_corner_size),
+                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "choco_tile.png")), tile_image_center_size),
+                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir,self.images_folder, "tile_side.png")), tile_image_side_size),
+                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), tile_image_bottom_size),
+                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")), tile_image_corner_size),
                 },
             Color.PURPLE : {
-                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "spaceship_tile.png")),self.tile_image_center_size),
-                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir,self.images_folder, "tile_side.png")), self.tile_image_side_size),
-                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), self.tile_image_bottome_size),
-                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")),self.tile_image_corner_size),
+                Image_Section.CENTER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "spaceship_tile.png")), tile_image_center_size),
+                Image_Section.SIDE : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir,self.images_folder, "tile_side.png")), tile_image_side_size),
+                Image_Section.BOTTOM : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_bottom.png")), tile_image_bottom_size),
+                Image_Section.CORNER : pygame.transform.scale(pygame.image.load(os.path.join(self.root_dir, self.images_folder, "tile_corner.png")), tile_image_corner_size),
                 }
         }
 
@@ -106,18 +115,19 @@ class Game:
     #to center the board in the window
     offset_board_x = 0
     tool_bar_height = 50
-    tile_width = 45
-    tile_height = int(1.6*tile_width)
     fps = 60
     background_color = Color.BACKGROUND
 
     score = 0
 
     def __init__(self):
+        # setting statics
+        Tile.TILE_WIDTH = 45
+        Tile.TILE_HEIGHT = int(1.6*Tile.TILE_WIDTH)
+
         pygame.init()
         self.gameDisplay = pygame.display.set_mode((self.display_width, self.display_height))
         pygame.display.set_caption('MagneTile2')
-        self.gameDisplay.fill((119, 237, 131))
         self.clock = pygame.time.Clock()
         self.game_images = Game_Images()
         self.language = Game_Language()
@@ -131,15 +141,27 @@ class Game:
         
     def initialize_board(self, color_nb, col_nb, row_nb):
         print("Init board")
-        self.offset_board_x = (self.display_width - (col_nb*self.tile_width)) / 2
-        self.board = Board(color_nb, col_nb, row_nb, self.tile_width, self.tile_height, self.offset_board_x, self.tool_bar_height)
+        self.offset_board_x = (self.display_width - (col_nb*Tile.TILE_WIDTH)) / 2
+        Tile.X_OFFSET = self.offset_board_x
+        Tile.Y_OFFSET = self.tool_bar_height
+        self.board = Board(color_nb, col_nb, row_nb)
 
+    ###
+    # Draws a TIE (Tile_Image_Element)
+    ###
     def draw_tie(self, tie):
         ### draws a tie on the screen (tie is Tile Image Element) ###
         pyimage_to_draw = self.game_images.tiles_images[tie.color][tie.section]
         #print("drawing tile" + str(tie.coord))
         self.gameDisplay.blit(pyimage_to_draw, tie.coord)
-        
+
+    ###
+    # Draws a list of TIEs (Tile_Image_Element)
+    ###
+    def draw_ties(self, list_of_ties):
+        for tie in list_of_ties:
+            self.draw_tie(tie)
+
     ###
     # Draws the whole board on the surface
     ###
@@ -149,18 +171,23 @@ class Game:
         ties_to_draw = self.board.get_all_tie()
         for tie in ties_to_draw:
             self.draw_tie(tie)
-        
-    def draw_tile_count_text(self):
-        tile_count_text.draw(self.gameDisplay)
-        tile_count_number.update_and_draw(str(tile_count),self.gameDisplay,self.background_color.value)
-
-    def draw_undo_button(self):
-        undo_button.draw(self.gameDisplay)
+    ###
+    # Draws the list of Tile_Image_Element bg_to_draw on the screen
+    ###
+    def draw_background_tiles(self, bg_to_draw):
+        for tie in bg_to_draw:
+            size = self.game_images.bg_size_map[tie.section]
+            pygame.draw.rect(self.gameDisplay, self.background_color.value, pygame.Rect(tie.coord,size))
 
     def run(self): 
         ### GAME LOOP ###
         self.draw_board()
         pygame.display.update()
+
+        processing_falling_movements = False
+        processing_sliding_movements = False
+        bg_to_draw = [] # list of Tile_Image_Element that represents the background to draw
+        sides_to_draw = [] # list of Tile_Image_Element
 
         app_running = True
         while app_running:
@@ -170,7 +197,7 @@ class Game:
 
             if (self.game_state == Game_State.PLAYING):
 
-                if not self.board.is_processing_movements():
+                if not (processing_falling_movements or processing_sliding_movements):
 
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         mouse_pos = pygame.mouse.get_pos()
@@ -180,10 +207,40 @@ class Game:
                     if event.type == pygame.MOUSEBUTTONUP:
                         mouse_pos = pygame.mouse.get_pos()
                         if self.board.is_clicked(mouse_pos): # board click
-                            self.board.process_click_mouse_up(mouse_pos)
+                            result_process_mouse_up = self.board.process_click_mouse_up(mouse_pos)
+                            if result_process_mouse_up:
+                                (sides_to_draw, bg_to_draw) = result_process_mouse_up
+                                processing_falling_movements = True
 
                 else:
                     print("Processing movements")
+                    self.draw_background_tiles(bg_to_draw)
+
+                    ############### WIP 
+                    if processing_falling_movements and not processing_sliding_movements:
+                        # Falling tiles
+                        processing_falling_movements = not self.board.move_tiles(downward_moves, Direction.DOWN)
+                        self.draw_ties(sides_to_draw)   
+                    if not processing_falling_movements:
+
+                        if not processing_sliding_movements:
+                            sideway_moves = self.board.compute_side_movements()
+                            if sideway_moves != []:
+                                # Compute first time sliding tiles
+                                bg_to_draw = [compute_background_to_draw_for_sliding(sideway_moves)]
+                                processing_sliding_movements = True
+                        else:
+                            #Sliding tiles
+                            processing_sliding_movements = not move_tiles(sideway_moves, Direction.LEFT)
+                            draw_sliding_tiles(sideway_moves)
+
+                    if not (processing_falling_movements or processing_sliding_movements):
+                        # Finished moving tiles
+                        bg_to_draw = []
+                        sides_to_draw = []
+                        game_over = check_game_over()
+                        history.add_tile_movements_to_current_step(sideway_moves)
+                        history.add_tile_movements_to_current_step(downward_moves)
 
 
             else: # GAME OVER

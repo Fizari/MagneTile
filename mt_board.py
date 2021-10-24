@@ -1,4 +1,4 @@
-from mt_enums import Color, Image_Section
+from mt_enums import Color, Image_Section, Direction
 from mt_tile import Tile, Tile_Movement, Tile_Image_Element
 from mt_history import History
 from random import seed
@@ -18,9 +18,6 @@ class Board:
     tile_count = 0
     color_nb = 0
 
-    processing_falling_movements = False
-    processing_sliding_movements = False
-
     board_coord = (0,0)
     board_width = 0 
     board_height = 0
@@ -30,17 +27,17 @@ class Board:
     downward_moves = [] # used for the downward animation
 
     """ Represents the board of the game (2D array of tiles) """
-    def __init__(self, color_nb, col_nb, row_nb, tile_width, tile_height, offset_x, offset_y):
+    def __init__(self, color_nb, col_nb, row_nb):
         self.row_nb = row_nb
         self.col_nb = col_nb
         self.color_nb = color_nb
         self.board = []
-        self.board_coord = (offset_x, offset_y)
-        self.board_width = col_nb * tile_width
-        self.board_height = row_nb * tile_height
+        self.board_coord = (Tile.X_OFFSET, Tile.Y_OFFSET)
+        self.board_width = col_nb * Tile.TILE_WIDTH
+        self.board_height = row_nb * Tile.TILE_HEIGHT
         self.history = History()
-        #self.initialize_custom(tile_width, tile_height, offset_x, offset_y)
-        self.initialize_random(color_nb, col_nb, row_nb, tile_width, tile_height, offset_x, offset_y)
+        #self.initialize_custom()
+        self.initialize_random(color_nb, col_nb, row_nb)
         # seed random number generator
         seed(time.time())
 
@@ -64,7 +61,7 @@ class Board:
     ###
     # TEMPORARY for testing
     ###
-    def initialize_custom(self, tile_width, tile_height, offset_x, offset_y):
+    def initialize_custom(self):
         template = [
             [Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,    Color.BLUE,   Color.GREEN],
             [None,         Color.GREEN,  Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],
@@ -82,11 +79,11 @@ class Board:
                 if template[i][j] is None:
                     self.board[i].append(None) 
                 else:
-                    self.board[i].append(Tile(i,j, template[i][j], tile_width, tile_height, offset_x, offset_y))
+                    self.board[i].append(Tile(i,j, template[i][j]))
         self.row_nb = len(template[0])
         self.col_nb = len(template)
 
-    def initialize_random(self, color_nb, col_nb, row_nb, tile_width, tile_height, offset_x, offset_y):
+    def initialize_random(self, color_nb, col_nb, row_nb):
         ### Populates the board with a controlled randomized generation of tiles ###
         self.board = []
         self.row_nb = row_nb
@@ -152,7 +149,7 @@ class Board:
                 color_count[color] += 1
                 color_count_total += 1
 
-                new_tile = Tile(i,j,color, tile_width, tile_height, offset_x, offset_y)
+                new_tile = Tile(i,j,color)
                 last_color = color
 
                 self.board[i].append(new_tile)
@@ -164,9 +161,6 @@ class Board:
                 if self.board[i][j] is not None:
                     tie_list += self.board[i][j].get_tie_all_sides()
         return tie_list
-
-    def is_processing_movements(self):
-        return self.processing_falling_movements or self.processing_sliding_movements
 
     def is_clicked(self, mouse_coord):
         (mouse_x, mouse_y) = mouse_coord
@@ -424,6 +418,87 @@ class Board:
         tiles_to_draw_all_passes = tiles_to_draw_first_pass + tiles_to_draw_second_pass + tiles_to_draw_third_pass
         return (tiles_to_draw_all_passes,background_to_draw)
 
+    ###
+    # Applies the moves from the list of Tile_Movement(see compute_downward_movements)
+    # return a bool indicating if the tiles are in their respective place
+    ###
+    def move_tiles(self, moves, direction):
+        tiles_in_place = True
+        for m in moves:
+            t = m.tile
+            (dest_i, dest_j) = m.to_dest
+            finished = False
+
+            if direction == Direction.DOWN:
+                finished = t.fall_to(dest_i,dest_j)
+            if direction == Direction.LEFT:
+                finished = t.slide_left_to(dest_i,dest_j)
+
+            if finished:
+                self.board[t.i][t.j] = None
+                self.board[dest_i][dest_j] = t
+                t.move(dest_i, dest_j)
+            else:
+                tiles_in_place = False
+                    
+        return tiles_in_place
+
+    ###
+    # Return a list of Tile_Movement representing the moves the tiles need to do
+    ###
+    def compute_side_movements(self):
+        moves = []
+        found_space = False
+        dest_i = 0
+        nb_empty_col = 0
+        for i in range(len(self.board)):
+            max_j = len(self.board[i]) - 1
+            if not self.board[i][max_j] and not found_space:
+                dest_i = i
+                found_space = True
+            if self.board[i][max_j] and found_space:
+                nb_empty_col = nb_empty_col + (i - dest_i)
+            if self.board[i][max_j] and nb_empty_col != 0:
+                for j in range(len(self.board[i])):
+                    if self.board[i][j]:
+                        moves.append(Tile_Movement(self.board[i][j], (i - nb_empty_col ,j)))
+                found_space = False
+        return moves
+
+    def get_xy_from_ij(self, coord):
+        (i,j) = coord
+        t = Tile(i,j,Color.RED)
+        return (t.rect.x, t.rect.y)
+
+    ###
+    # Get a list of background rectangles to draw from a list of moves for the sliding of the tiles
+    ###
+    def compute_background_to_draw_for_sliding(self, moves):
+        min_x = display_width
+        max_x = 0
+        min_y = display_height
+        max_y = 0
+
+        for m in moves:
+            t = m.tile
+            if t.get_x() > max_x:
+                max_x = t.get_x()
+            (dest_x,dest_y) = self.get_xy_from_ij(m.to_dest)
+            if dest_x < min_x:
+                min_x = dest_x
+            if t.get_y() < min_y:
+                min_y = t.get_y()
+            if t.get_y() > max_y:
+                max_y = t.get_y()
+
+        min_x = min_x + side_width
+        max_x = max_x + Tile.TILE_WIDTH 
+        max_y = max_y + Tile.TILE_HEIGHT 
+        width = (max_x - min_x) + side_width
+        height = max_y - min_y + bottom_height
+        r = pygame.Rect((min_x, min_y), (width, height))
+        return r
+
     def process_click_mouse_down(self, mouse_coord):
         clicked_tile = self.get_tile_from_coord(mouse_coord)
         if clicked_tile is not None:
@@ -450,11 +525,10 @@ class Board:
                     self.board[c.i][c.j] = None
                 self.history.add_new_step(connected_tiles)
                 self.tile_count -= len(connected_tiles)
-                #self.processing_falling_movements = True
                 # Compute first time falling tiles
                 self.downward_moves = self.compute_downward_movements(connected_tiles)
                 bg_to_draw = bg_to_draw + self.compute_background_to_draw(self.downward_moves)
                 (sides_to_draw, side_bg_to_draw) = self.compute_sides_to_draw(connected_tiles, self.downward_moves)
                 bg_to_draw += side_bg_to_draw
-                # Update tile count
-                #tile_count_number.update_and_draw(str(tile_count),background_color.value)
+                return (sides_to_draw, bg_to_draw)
+        return None

@@ -26,26 +26,25 @@ class Tile_Image_Element:
 
 class Tile:
     """ Represents a Tile in space """
-    x_offset = 0
-    y_offset = 0
+
+    # STATIC VARIABLES
+    TILE_WIDTH = 0 
+    TILE_HEIGHT = 0 
+    X_OFFSET = 0
+    Y_OFFSET = 0
+
     i = 0
     j = 0
     coord = (0,0) # coordinates on the screen 
-    tile_width = 0
-    tile_height = 0
     color = None # /!\ Color enum (not Tuple)
     speed = 6 # speed when drawing
     k = 1.05 # acceleration factor
 
-    def __init__(self, i, j, color, tile_width, tile_height, x_offset, y_offset):
+    def __init__(self, i, j, color):
         self.i = i
         self.j = j
-        self.x_offset = x_offset
-        self.y_offset = y_offset
-        self.tile_width = tile_width
-        self.tile_height= tile_height
-        x = i*tile_width + self.x_offset
-        y = j*tile_height + self.y_offset
+        x = i*self.TILE_WIDTH + self.X_OFFSET
+        y = j*self.TILE_HEIGHT + self.Y_OFFSET
         self.coord = (x,y)
         self.color = color
 
@@ -61,25 +60,25 @@ class Tile:
         return self.get_x()
 
     def get_pos_right(self):
-        return self.get_x() + self.tile_width
+        return self.get_x() + self.TILE_WIDTH
 
     def get_pos_top(self):
         return self.get_y()
 
     def get_pos_bottom(self):
-        return self.get_y() + self.tile_height
+        return self.get_y() + self.TILE_HEIGHT
 
     def get_supposed_coord(self):
-        return (self.i*self.tile_width + self.x_offset, self.j*self.tile_height + self.y_offset)
+        return (self.i*self.TILE_WIDTH + self.X_OFFSET, self.j*self.TILE_HEIGHT + self.Y_OFFSET)
 
     def get_coord_from_grid_pos(self, i, j):
-        return (i*self.tile_width + self.x_offset, j*self.tile_height + self.y_offset)
+        return (i*self.TILE_WIDTH + self.X_OFFSET, j*self.TILE_HEIGHT + self.Y_OFFSET)
 
     def move(self, i, j):
         self.i = i
         self.j = j
-        x = i*self.tile_width + self.x_offset
-        y = j*self.tile_height + self.y_offset
+        x = i*self.TILE_WIDTH + self.X_OFFSET
+        y = j*self.TILE_HEIGHT + self.Y_OFFSET
         self.coord = (x,y)
 
     def is_in_place(self):
@@ -123,17 +122,17 @@ class Tile:
     def get_tie_side(self):
         ### tie = tile_image_element ###
         (x,y) = self.coord
-        return Tile_Image_Element(self.color, Image_Section.SIDE, x + self.tile_width, y) 
+        return Tile_Image_Element(self.color, Image_Section.SIDE, x + self.TILE_WIDTH, y) 
 
     def get_tie_bottom(self):
         ### tie = tile_image_element ###
         (x,y) = self.coord
-        return Tile_Image_Element(self.color, Image_Section.BOTTOM, x, y + self.tile_height) 
+        return Tile_Image_Element(self.color, Image_Section.BOTTOM, x, y + self.TILE_HEIGHT) 
 
     def get_tie_corner(self):
         ### tie = tile_image_element ###
         (x,y) = self.coord
-        return Tile_Image_Element(self.color, Image_Section.CORNER, x + self.tile_width, y + self.tile_height) 
+        return Tile_Image_Element(self.color, Image_Section.CORNER, x + self.TILE_WIDTH, y + self.TILE_HEIGHT) 
 
     def get_tie_all_sides(self):
         tie_list = []
@@ -146,7 +145,7 @@ class Tile:
     def is_clicked(self, mouse_coord):
         (mouse_x, mouse_y) = mouse_coord
         (x, y) = self.coord
-        return mouse_x >= x and mouse_y >= y and mouse_x <= (x + self.tile_width) and mouse_y <= (y + self.tile_height)
+        return mouse_x >= x and mouse_y >= y and mouse_x <= (x + self.TILE_WIDTH) and mouse_y <= (y + self.TILE_HEIGHT)
 
     def  __str__(self):
         return "TILE("+str(self.i)+","+str(self.j)+")"
