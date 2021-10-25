@@ -25,6 +25,7 @@ class Board:
     tile_on_mouse_down = None
 
     downward_moves = [] # used for the downward animation
+    sideway_moves = [] # used for the sliding left animation
 
     """ Represents the board of the game (2D array of tiles) """
     def __init__(self, color_nb, col_nb, row_nb):
@@ -309,6 +310,11 @@ class Board:
 
         return (bot_dict, list(falling_indexes))
 
+    def create_background_tie(self, section, coord):
+        tmpTile = Tile(0,0,None)
+        tmpTile.coord = coord
+        return Tile_Image_Element(tmpTile, section)
+
     ###
     # Get the background of all the 'reacting' tiles around the disapearing tiles to draw
     ###
@@ -384,15 +390,15 @@ class Board:
                                 tiles_to_draw_third_pass.append(n.get_tie_center())
                                 tiles_to_draw_third_pass.append(n.get_tie_bottom())
 
-                                background_to_draw.append(Tile_Image_Element(n.color, Image_Section.CORNER, n.get_pos_left(), n.get_pos_bottom())) # Add background to remove corner of previous tile border
+                                background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (n.get_pos_left(), n.get_pos_bottom()))) # Add background to remove corner of previous tile border
                             else:
                                 tiles_to_draw_third_pass.append(n.get_tie_center()) # Add only center of right neighbor
-                            background_to_draw.append(Tile_Image_Element(n.color, Image_Section.CORNER, n.get_pos_left(), n.get_pos_top())) # Add background to remove corner of previous tile on static right neighbor
+                            background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (n.get_pos_left(), n.get_pos_top()))) # Add background to remove corner of previous tile on static right neighbor
                         else:
-                            background_to_draw.append(Tile_Image_Element(check_right.color, Image_Section.SIDE, check_right.get_pos_right(), check_right.get_pos_top())) # Add background of side of current tile
+                            background_to_draw.append(self.create_background_tie(Image_Section.SIDE, (check_right.get_pos_right(), check_right.get_pos_top()))) # Add background of side of current tile
                     else:
-                        background_to_draw.append(Tile_Image_Element(check_right.color, Image_Section.SIDE, check_right.get_pos_right(), check_right.get_pos_top())) # Add background of side of current tile when on edge
-                        background_to_draw.append(Tile_Image_Element(check_right.color, Image_Section.CORNER, check_right.get_pos_right(), check_right.get_pos_bottom())) # Add background of corner of current tile when on edge
+                        background_to_draw.append(self.create_background_tie(Image_Section.SIDE, (check_right.get_pos_right(), check_right.get_pos_top()))) # Add background of side of current tile when on edge
+                        background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (check_right.get_pos_right(), check_right.get_pos_bottom()))) # Add background of corner of current tile when on edge
 
                     if check_right.j == bot_edge[check_right.i]:# check corner
                         if check_right.i + 1 < len(self.board) and check_right.j + 1 < len(self.board[check_right.i]):
@@ -402,7 +408,7 @@ class Board:
                             else:
                                 tiles_to_draw_third_pass.append(self.board[check_right.i][check_right.j + 1].get_tie_side()) # ??? (lost in translation)
                         if check_right.i < len(self.board) and check_right.j < len(self.board[check_right.i]):
-                                background_to_draw.append(Tile_Image_Element(check_right.color, Image_Section.CORNER, check_right.get_pos_right(), check_right.get_pos_bottom())) # Add background of old corner of static tile
+                                background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (check_right.get_pos_right(), check_right.get_pos_bottom()))) # Add background of old corner of static tile
             # BOTTOM EDGE
             if t.j == bot_edge[t.i]:
                 if t.j != len(self.board[t.i]) - 1: # not bottom edge of board
@@ -411,7 +417,7 @@ class Board:
                     if n.i == len(self.board) - 1:
                         tiles_to_draw_third_pass.append(n.get_tie_side()) # Add side if tile is on edge of board
                 else: # bottom edge of board
-                    background_to_draw.append(Tile_Image_Element(t.color, Image_Section.BOTTOM, t.get_pos_left(), t.get_pos_bottom())) # Add background of bottom side of removed tiles when on edge
+                    background_to_draw.append(self.create_background_tie(Image_Section.BOTTOM, (t.get_pos_left(), t.get_pos_bottom()))) # Add background of bottom side of removed tiles when on edge
 
             last_tile = t
 
@@ -443,6 +449,12 @@ class Board:
                     
         return tiles_in_place
 
+    def moves_tiles_downward(self):
+        return self.move_tiles(self.downward_moves, Direction.DOWN)
+
+    def moves_tiles_left(self):
+        return self.move_tiles(self.sideway_moves, Direction.LEFT)
+
     ###
     # Return a list of Tile_Movement representing the moves the tiles need to do
     ###
@@ -463,20 +475,21 @@ class Board:
                     if self.board[i][j]:
                         moves.append(Tile_Movement(self.board[i][j], (i - nb_empty_col ,j)))
                 found_space = False
-        return moves
+        self.sideway_moves = moves
+        return moves != []
 
     def get_xy_from_ij(self, coord):
         (i,j) = coord
         t = Tile(i,j,Color.RED)
-        return (t.rect.x, t.rect.y)
+        return t.coord
 
     ###
     # Get a list of background rectangles to draw from a list of moves for the sliding of the tiles
     ###
-    def compute_background_to_draw_for_sliding(self, moves):
-        min_x = display_width
+    def compute_background_to_draw_for_sliding(self, moves, side_width, bottom_height):
+        min_x = 999999999999999999 # AKA infinity
         max_x = 0
-        min_y = display_height
+        min_y = 999999999999999999
         max_y = 0
 
         for m in moves:
@@ -496,8 +509,11 @@ class Board:
         max_y = max_y + Tile.TILE_HEIGHT 
         width = (max_x - min_x) + side_width
         height = max_y - min_y + bottom_height
-        r = pygame.Rect((min_x, min_y), (width, height))
-        return r
+        tmpTile = Tile(0,0,None)
+        tmpTile.coord = (min_x, min_y)
+        tmpTile.TILE_WIDTH = width
+        tmpTile.TILE_HEIGHT = height
+        return Tile_Image_Element(tmpTile, None)
 
     def process_click_mouse_down(self, mouse_coord):
         clicked_tile = self.get_tile_from_coord(mouse_coord)

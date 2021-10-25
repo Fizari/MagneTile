@@ -151,9 +151,19 @@ class Game:
     ###
     def draw_tie(self, tie):
         ### draws a tie on the screen (tie is Tile Image Element) ###
-        pyimage_to_draw = self.game_images.tiles_images[tie.color][tie.section]
-        #print("drawing tile" + str(tie.coord))
-        self.gameDisplay.blit(pyimage_to_draw, tie.coord)
+        pyimage_to_draw = self.game_images.tiles_images[tie.tile.color][tie.section]
+
+        (x, y) = tie.tile.coord
+        if tie.section == Image_Section.CENTER:
+            coord = (x, y)
+        elif tie.section == Image_Section.SIDE:
+            coord = (x + Tile.TILE_WIDTH, y)
+        elif tie.section == Image_Section.BOTTOM:
+            coord = (x, y + Tile.TILE_HEIGHT)
+        elif tie.section == Image_Section.CORNER:
+            coord = (x + Tile.TILE_WIDTH, y + Tile.TILE_HEIGHT)
+
+        self.gameDisplay.blit(pyimage_to_draw, coord)
 
     ###
     # Draws a list of TIEs (Tile_Image_Element)
@@ -176,8 +186,19 @@ class Game:
     ###
     def draw_background_tiles(self, bg_to_draw):
         for tie in bg_to_draw:
-            size = self.game_images.bg_size_map[tie.section]
-            pygame.draw.rect(self.gameDisplay, self.background_color.value, pygame.Rect(tie.coord,size))
+            size = self.game_images.bg_size_map[tie.section] if tie.section else (tie.tile.TILE_WIDTH, tie.tile.TILE_HEIGHT)
+            pygame.draw.rect(self.gameDisplay, self.background_color.value, pygame.Rect(tie.tile.coord,size))
+
+    ###
+    # Draws the moving tiles
+    ###
+    def draw_moving_tiles(self, moves):
+        tie_list = []
+        for m in moves:
+            t = m.tile
+            all_ties = t.get_tie_all_sides()
+            tie_list += all_ties
+        self.draw_ties(tie_list)
 
     def run(self): 
         ### GAME LOOP ###
@@ -211,36 +232,37 @@ class Game:
                             if result_process_mouse_up:
                                 (sides_to_draw, bg_to_draw) = result_process_mouse_up
                                 processing_falling_movements = True
+                                pygame.display.update()
 
                 else:
-                    print("Processing movements")
                     self.draw_background_tiles(bg_to_draw)
 
                     ############### WIP 
                     if processing_falling_movements and not processing_sliding_movements:
                         # Falling tiles
-                        processing_falling_movements = not self.board.move_tiles(downward_moves, Direction.DOWN)
+                        processing_falling_movements = not self.board.moves_tiles_downward()
+
                         self.draw_ties(sides_to_draw)   
                     if not processing_falling_movements:
 
                         if not processing_sliding_movements:
-                            sideway_moves = self.board.compute_side_movements()
-                            if sideway_moves != []:
+                            if self.board.compute_side_movements():
                                 # Compute first time sliding tiles
-                                bg_to_draw = [compute_background_to_draw_for_sliding(sideway_moves)]
+                                bg_to_draw = [self.board.compute_background_to_draw_for_sliding(self.board.sideway_moves, self.game_images.side_width, self.game_images.bottom_height)]
                                 processing_sliding_movements = True
                         else:
                             #Sliding tiles
-                            processing_sliding_movements = not move_tiles(sideway_moves, Direction.LEFT)
-                            draw_sliding_tiles(sideway_moves)
+                            processing_sliding_movements = not self.board.moves_tiles_left()
+                            self.draw_moving_tiles(self.board.sideway_moves)
 
                     if not (processing_falling_movements or processing_sliding_movements):
                         # Finished moving tiles
                         bg_to_draw = []
                         sides_to_draw = []
-                        game_over = check_game_over()
-                        history.add_tile_movements_to_current_step(sideway_moves)
-                        history.add_tile_movements_to_current_step(downward_moves)
+                        #game_over = check_game_over()
+                        #history.add_tile_movements_to_current_step(self.board.sideway_moves)
+                        #history.add_tile_movements_to_current_step(self.board.downward_moves)
+                    pygame.display.update()
 
 
             else: # GAME OVER

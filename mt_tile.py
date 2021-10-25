@@ -1,28 +1,13 @@
 from mt_enums import Color, Image_Section
 
-class Solid_Color_Image:
-
-    color = None
-    coord = (0,0)
-    width = 0 
-    height = 0
-
-    def __init__(self, color, coord, width, height):
-        self.color = color
-        self.coord = coord
-        self.width = width
-        self.height = height
-
 class Tile_Image_Element:
     """ Represents the part of the tile that needs to be drawn on the screen """
-    color = None # mt_enums.Color
     section = None # mt_enums.Image_Section
-    coord = (0,0) # position of the element on screen
+    tile = None # Tile
 
-    def __init__(self, color, section, x, y):
-        self.color = color
+    def __init__(self, tile, section):
+        self.tile = tile
         self.section = section
-        self.coord = (x, y)
 
 class Tile:
     """ Represents a Tile in space """
@@ -102,7 +87,7 @@ class Tile:
         else:
             self.__accelerate()
             self.coord = (curr_x,curr_y + self.speed)
-            return False
+            return False 
 
     def slide_left_to(self, i, j):
         """Draws the tile sliding left toward (i,j), same as fall_to(self, i, j)"""
@@ -116,23 +101,19 @@ class Tile:
 
     def get_tie_center(self):
         ### tie = tile_image_element ###
-        (x,y) = self.coord
-        return Tile_Image_Element(self.color, Image_Section.CENTER, x, y)
+        return Tile_Image_Element(self, Image_Section.CENTER)
 
     def get_tie_side(self):
         ### tie = tile_image_element ###
-        (x,y) = self.coord
-        return Tile_Image_Element(self.color, Image_Section.SIDE, x + self.TILE_WIDTH, y) 
+        return Tile_Image_Element(self, Image_Section.SIDE) 
 
     def get_tie_bottom(self):
         ### tie = tile_image_element ###
-        (x,y) = self.coord
-        return Tile_Image_Element(self.color, Image_Section.BOTTOM, x, y + self.TILE_HEIGHT) 
+        return Tile_Image_Element(self, Image_Section.BOTTOM) 
 
     def get_tie_corner(self):
         ### tie = tile_image_element ###
-        (x,y) = self.coord
-        return Tile_Image_Element(self.color, Image_Section.CORNER, x + self.TILE_WIDTH, y + self.TILE_HEIGHT) 
+        return Tile_Image_Element(self, Image_Section.CORNER) 
 
     def get_tie_all_sides(self):
         tie_list = []
