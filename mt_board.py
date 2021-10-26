@@ -1,4 +1,4 @@
-from mt_enums import Color, Image_Section, Direction
+from mt_enums import Color, Image_Section, Direction, Game_State
 from mt_tile import Tile, Tile_Movement, Tile_Image_Element
 from mt_history import History
 from random import seed
@@ -18,16 +18,16 @@ class Board:
     tile_count = 0
     color_nb = 0
 
-    board_coord = (0,0)
-    board_width = 0 
+    board_coord = (0, 0)
+    board_width = 0
     board_height = 0
 
     tile_on_mouse_down = None
 
-    downward_moves = [] # used for the downward animation
-    sideway_moves = [] # used for the sliding left animation
+    downward_moves = []  # used for the downward animation
+    sideway_moves = []  # used for the sliding left animation
 
-    """ Represents the board of the game (2D array of tiles) """
+    # Represents the board of the game (2D array of tiles) #
     def __init__(self, color_nb, col_nb, row_nb):
         self.row_nb = row_nb
         self.col_nb = col_nb
@@ -37,7 +37,7 @@ class Board:
         self.board_width = col_nb * Tile.TILE_WIDTH
         self.board_height = row_nb * Tile.TILE_HEIGHT
         self.history = History()
-        #self.initialize_custom()
+        # self.initialize_custom()
         self.initialize_random(color_nb, col_nb, row_nb)
         # seed random number generator
         seed(time.time())
@@ -78,14 +78,14 @@ class Board:
             self.board.append([])
             for j in range(len(template[i])):
                 if template[i][j] is None:
-                    self.board[i].append(None) 
+                    self.board[i].append(None)
                 else:
-                    self.board[i].append(Tile(i,j, template[i][j]))
+                    self.board[i].append(Tile(i, j, template[i][j]))
         self.row_nb = len(template[0])
         self.col_nb = len(template)
 
     def initialize_random(self, color_nb, col_nb, row_nb):
-        ### Populates the board with a controlled randomized generation of tiles ###
+        # Populates the board with a controlled randomized generation of tiles #
         self.board = []
         self.row_nb = row_nb
         self.col_nb = col_nb
@@ -94,7 +94,7 @@ class Board:
         for c in self.colors_rand_arr[:color_nb]:
             color_count[c] = 0
         color_count_total = 0
-        chance_cluster = 0.25 # chance of to be of the same color of either the left neighbor or the last tile
+        chance_cluster = 0.25  # chance of to be of the same color of either the left neighbor or the last tile
 
         last_color = self.get_random_color()
 
@@ -134,7 +134,7 @@ class Board:
                             if k != last_color:
                                 total = (color_count_total - count_last_color)
                                 ratio = color_count[k] / total
-                                chance_color[k] = ((1 - ratio) / (color_nb - 2)) + cumul # invert he ratio of tiles on the board to get corresponding chances
+                                chance_color[k] = ((1 - ratio) / (color_nb - 2)) + cumul  # invert he ratio of tiles on the board to get corresponding chances
                                 cumul = chance_color[k]
 
                         r2 = random()
@@ -146,14 +146,38 @@ class Board:
 
                     else:
                         color = self.get_random_color()
-                    
+
                 color_count[color] += 1
                 color_count_total += 1
 
-                new_tile = Tile(i,j,color)
+                new_tile = Tile(i, j, color)
                 last_color = color
 
                 self.board[i].append(new_tile)
+
+    ### 
+    # Checks the whole board is the game is over (won or lost)
+    ###
+    def check_game_over(self):
+        tiles_checked = []
+        nb_clusters = 0
+        for i in range(len(self.board)):
+            for j in range(len(self.board[i])):
+                curr_tile = self.board[i][j]
+                if curr_tile and not curr_tile in tiles_checked:
+                    cluster = self.get_connected_tiles(curr_tile)
+                    if len(cluster) > 1:
+                        nb_clusters = nb_clusters + 1
+                    for t in cluster:
+                        tiles_checked.append(t)
+
+        if nb_clusters == 0:
+            if len(tiles_checked) == 0:
+                return Game_State.WIN
+            else:
+                return Game_State.LOSE
+        else:
+            return Game_State.PLAYING
 
     def get_all_tie(self):
         tie_list = []
@@ -167,7 +191,7 @@ class Board:
         (mouse_x, mouse_y) = mouse_coord
         (board_x, board_y) = self.board_coord
         return mouse_x >= board_x and mouse_y >= board_y and mouse_x <= (board_x + self.board_width) and mouse_y <= (board_y + self.board_height)
-    
+
     ###
     # Get the neighbors of a tile that are of the same color
     ###
@@ -182,42 +206,42 @@ class Board:
             if i < len(self.board) - 1:
                 if j > 0:
                     if j < len(self.board[0]) - 1:
-                        coord_to_check.append((i,j-1))
-                        coord_to_check.append((i,j+1))
-                        coord_to_check.append((i-1,j))
-                        coord_to_check.append((i+1,j))
+                        coord_to_check.append((i, j - 1))
+                        coord_to_check.append((i, j + 1))
+                        coord_to_check.append((i - 1, j))
+                        coord_to_check.append((i + 1, j))
                     else:
-                        coord_to_check.append((i,j-1))
-                        coord_to_check.append((i-1,j))
-                        coord_to_check.append((i+1,j))
+                        coord_to_check.append((i, j - 1))
+                        coord_to_check.append((i - 1, j))
+                        coord_to_check.append((i + 1, j))
                 else:
-                    coord_to_check.append((i,j+1))
-                    coord_to_check.append((i-1,j))
-                    coord_to_check.append((i+1,j))
+                    coord_to_check.append((i, j + 1))
+                    coord_to_check.append((i - 1, j))
+                    coord_to_check.append((i + 1, j))
             else:
                 if j > 0:
                     if j < len(self.board[0]) - 1:
-                        coord_to_check.append((i,j-1))
-                        coord_to_check.append((i,j+1))
-                        coord_to_check.append((i-1,j))
+                        coord_to_check.append((i, j - 1))
+                        coord_to_check.append((i, j + 1))
+                        coord_to_check.append((i - 1, j))
                     else:
-                        coord_to_check.append((i,j-1))
-                        coord_to_check.append((i-1,j))
+                        coord_to_check.append((i, j - 1))
+                        coord_to_check.append((i - 1, j))
                 else:
-                    coord_to_check.append((i,j+1))
-                    coord_to_check.append((i-1,j))
+                    coord_to_check.append((i, j + 1))
+                    coord_to_check.append((i - 1, j))
         else:
             if j > 0:
-                    if j < len(self.board[0]) - 1:
-                        coord_to_check.append((i,j-1))
-                        coord_to_check.append((i,j+1))
-                        coord_to_check.append((i+1,j))
-                    else:
-                        coord_to_check.append((i,j-1))
-                        coord_to_check.append((i+1,j))
+                if j < len(self.board[0]) - 1:
+                    coord_to_check.append((i, j - 1))
+                    coord_to_check.append((i, j + 1))
+                    coord_to_check.append((i + 1, j))
+                else:
+                    coord_to_check.append((i, j - 1))
+                    coord_to_check.append((i + 1, j))
             else:
-                coord_to_check.append((i,j+1))
-                coord_to_check.append((i+1,j))
+                coord_to_check.append((i, j + 1))
+                coord_to_check.append((i + 1, j))
 
         for c in coord_to_check:
             tile_to_check = self.board[c[0]][c[1]]
@@ -230,6 +254,7 @@ class Board:
     # Depth first search algoritm to get the tiles of the same color
     ###
     connected_neighbors = set()
+
     def dfs(self, visited, tile):
         if tile not in visited:
             visited.add(tile)
@@ -239,11 +264,11 @@ class Board:
 
     def get_connected_tiles(self, tile):
         self.connected_neighbors = set()
-        self.dfs(set(),tile)
+        self.dfs(set(), tile)
         return self.connected_neighbors
 
     ###
-    # Get the tile that matches the coordinates, or None if no tiles are found 
+    # Get the tile that matches the coordinates, or None if no tiles are found
     ###
     def get_tile_from_coord(self, coord):
         for i in range(len(self.board)):
@@ -264,14 +289,14 @@ class Board:
             dest_j = 0
             found_space = False
             empty_tiles = 0
-            for j in range(len(self.board[i]) - 1, -1, -1): 
+            for j in range(len(self.board[i]) - 1, -1, -1):
                 if not self.board[i][j] and not found_space:
                     dest_j = j
                     found_space = True
                 if self.board[i][j] and found_space:
                     empty_tiles = empty_tiles + (dest_j - j)
                 if self.board[i][j] and empty_tiles != 0:
-                    moves.append(Tile_Movement(self.board[i][j],(i,j+empty_tiles)))
+                    moves.append(Tile_Movement(self.board[i][j], (i, j + empty_tiles)))
                     found_space = False
         return moves
 
@@ -287,19 +312,20 @@ class Board:
 
     def convert_tile_position_for_comparison(self, tile):
         return tile.i + len(self.board) * tile.j
+
     ###
     # Sorts a list of tiles regarding their position in the grid : left to right first, then top to bottom
     ###
     def sort_tiles(self, list_tiles, rev=False):
-        return sorted(list_tiles,key=(self.convert_tile_position_for_comparison), reverse=rev)
+        return sorted(list_tiles, key=(self.convert_tile_position_for_comparison), reverse=rev)
 
     ###
-    # Prepare data for the falling of the tiles 
+    # Prepare data for the falling of the tiles
     ###
     def compute_falling_tiles_data(self, tiles):
         bot_dict = {}
         falling_indexes = set()
-        for t in tiles :
+        for t in tiles:
             if self.board[t.i][t.j]:
                 falling_indexes.add(t.i)
             if t.i not in bot_dict.keys():
@@ -311,7 +337,7 @@ class Board:
         return (bot_dict, list(falling_indexes))
 
     def create_background_tie(self, section, coord):
-        tmpTile = Tile(0,0,None)
+        tmpTile = Tile(0, 0, None)
         tmpTile.coord = coord
         return Tile_Image_Element(tmpTile, section)
 
@@ -367,7 +393,7 @@ class Board:
                                 if check_left.i > 0 and check_left.j > 0:
                                     tl = self.board[check_left.i - 1][check_left.j - 1]
                                     if tl:
-                                        tiles_to_draw_first_pass.append(tl.get_tie_corner()) # Add corner to top left neighbor
+                                        tiles_to_draw_first_pass.append(tl.get_tie_corner())  # Add corner to top left neighbor
 
                             # Add side and corner to left neighbor
                             tiles_to_draw_first_pass.append(n.get_tie_side())
@@ -390,39 +416,40 @@ class Board:
                                 tiles_to_draw_third_pass.append(n.get_tie_center())
                                 tiles_to_draw_third_pass.append(n.get_tie_bottom())
 
-                                background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (n.get_pos_left(), n.get_pos_bottom()))) # Add background to remove corner of previous tile border
+                                # Add background to remove corner of previous tile border
+                                background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (n.get_pos_left(), n.get_pos_bottom())))
                             else:
-                                tiles_to_draw_third_pass.append(n.get_tie_center()) # Add only center of right neighbor
-                            background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (n.get_pos_left(), n.get_pos_top()))) # Add background to remove corner of previous tile on static right neighbor
+                                tiles_to_draw_third_pass.append(n.get_tie_center())  # Add only center of right neighbor
+                            background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (n.get_pos_left(), n.get_pos_top())))  # Add background to remove corner of previous tile on static right neighbor
                         else:
-                            background_to_draw.append(self.create_background_tie(Image_Section.SIDE, (check_right.get_pos_right(), check_right.get_pos_top()))) # Add background of side of current tile
+                            background_to_draw.append(self.create_background_tie(Image_Section.SIDE, (check_right.get_pos_right(), check_right.get_pos_top())))  # Add background of side of current tile
                     else:
-                        background_to_draw.append(self.create_background_tie(Image_Section.SIDE, (check_right.get_pos_right(), check_right.get_pos_top()))) # Add background of side of current tile when on edge
-                        background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (check_right.get_pos_right(), check_right.get_pos_bottom()))) # Add background of corner of current tile when on edge
+                        background_to_draw.append(self.create_background_tie(Image_Section.SIDE, (check_right.get_pos_right(), check_right.get_pos_top())))  # Add background of side of current tile when on edge
+                        background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (check_right.get_pos_right(), check_right.get_pos_bottom())))  # Add background of corner of current tile when on edge
 
-                    if check_right.j == bot_edge[check_right.i]:# check corner
+                    if check_right.j == bot_edge[check_right.i]:  # check corner
                         if check_right.i + 1 < len(self.board) and check_right.j + 1 < len(self.board[check_right.i]):
                             n_corner = self.board[check_right.i + 1][check_right.j + 1]
                             if n_corner:
-                                tiles_to_draw_third_pass.append(n_corner.get_tie_center()) # Add center of corner neighbor when tiles are falling
+                                tiles_to_draw_third_pass.append(n_corner.get_tie_center())  # Add center of corner neighbor when tiles are falling
                             else:
-                                tiles_to_draw_third_pass.append(self.board[check_right.i][check_right.j + 1].get_tie_side()) # ??? (lost in translation)
+                                tiles_to_draw_third_pass.append(self.board[check_right.i][check_right.j + 1].get_tie_side())  # ??? (lost in translation)
                         if check_right.i < len(self.board) and check_right.j < len(self.board[check_right.i]):
-                                background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (check_right.get_pos_right(), check_right.get_pos_bottom()))) # Add background of old corner of static tile
+                                background_to_draw.append(self.create_background_tie(Image_Section.CORNER, (check_right.get_pos_right(), check_right.get_pos_bottom())))  # Add background of old corner of static tile
             # BOTTOM EDGE
             if t.j == bot_edge[t.i]:
-                if t.j != len(self.board[t.i]) - 1: # not bottom edge of board
+                if t.j != len(self.board[t.i]) - 1:  # not bottom edge of board
                     n = self.board[t.i][t.j + 1]
-                    tiles_to_draw_third_pass.append(n.get_tie_center()) # Add center of bottom neighbor
+                    tiles_to_draw_third_pass.append(n.get_tie_center())  # Add center of bottom neighbor
                     if n.i == len(self.board) - 1:
-                        tiles_to_draw_third_pass.append(n.get_tie_side()) # Add side if tile is on edge of board
-                else: # bottom edge of board
-                    background_to_draw.append(self.create_background_tie(Image_Section.BOTTOM, (t.get_pos_left(), t.get_pos_bottom()))) # Add background of bottom side of removed tiles when on edge
+                        tiles_to_draw_third_pass.append(n.get_tie_side())  # Add side if tile is on edge of board
+                else:  # bottom edge of board
+                    background_to_draw.append(self.create_background_tie(Image_Section.BOTTOM, (t.get_pos_left(), t.get_pos_bottom())))  # Add background of bottom side of removed tiles when on edge
 
             last_tile = t
 
         tiles_to_draw_all_passes = tiles_to_draw_first_pass + tiles_to_draw_second_pass + tiles_to_draw_third_pass
-        return (tiles_to_draw_all_passes,background_to_draw)
+        return (tiles_to_draw_all_passes, background_to_draw)
 
     ###
     # Applies the moves from the list of Tile_Movement(see compute_downward_movements)
@@ -436,9 +463,9 @@ class Board:
             finished = False
 
             if direction == Direction.DOWN:
-                finished = t.fall_to(dest_i,dest_j)
+                finished = t.fall_to(dest_i, dest_j)
             if direction == Direction.LEFT:
-                finished = t.slide_left_to(dest_i,dest_j)
+                finished = t.slide_left_to(dest_i, dest_j)
 
             if finished:
                 self.board[t.i][t.j] = None
@@ -446,7 +473,7 @@ class Board:
                 t.move(dest_i, dest_j)
             else:
                 tiles_in_place = False
-                    
+
         return tiles_in_place
 
     def moves_tiles_downward(self):
@@ -473,21 +500,21 @@ class Board:
             if self.board[i][max_j] and nb_empty_col != 0:
                 for j in range(len(self.board[i])):
                     if self.board[i][j]:
-                        moves.append(Tile_Movement(self.board[i][j], (i - nb_empty_col ,j)))
+                        moves.append(Tile_Movement(self.board[i][j], (i - nb_empty_col, j)))
                 found_space = False
         self.sideway_moves = moves
         return moves != []
 
     def get_xy_from_ij(self, coord):
-        (i,j) = coord
-        t = Tile(i,j,Color.RED)
+        (i, j) = coord
+        t = Tile(i, j, Color.RED)
         return t.coord
 
     ###
     # Get a list of background rectangles to draw from a list of moves for the sliding of the tiles
     ###
     def compute_background_to_draw_for_sliding(self, moves, side_width, bottom_height):
-        min_x = 999999999999999999 # AKA infinity
+        min_x = 999999999999999999  # AKA infinity
         max_x = 0
         min_y = 999999999999999999
         max_y = 0
@@ -496,7 +523,7 @@ class Board:
             t = m.tile
             if t.get_x() > max_x:
                 max_x = t.get_x()
-            (dest_x,dest_y) = self.get_xy_from_ij(m.to_dest)
+            (dest_x, dest_y) = self.get_xy_from_ij(m.to_dest)
             if dest_x < min_x:
                 min_x = dest_x
             if t.get_y() < min_y:
@@ -505,34 +532,66 @@ class Board:
                 max_y = t.get_y()
 
         min_x = min_x + side_width
-        max_x = max_x + Tile.TILE_WIDTH 
-        max_y = max_y + Tile.TILE_HEIGHT 
+        max_x = max_x + Tile.TILE_WIDTH
+        max_y = max_y + Tile.TILE_HEIGHT
         width = (max_x - min_x) + side_width
         height = max_y - min_y + bottom_height
-        tmpTile = Tile(0,0,None)
+        tmpTile = Tile(0, 0, None)
         tmpTile.coord = (min_x, min_y)
         tmpTile.TILE_WIDTH = width
         tmpTile.TILE_HEIGHT = height
         return Tile_Image_Element(tmpTile, None)
 
+    ###
+    # Undo the last step of the history
+    ###
+    def undo_step(self):
+        if self.history == [] or self.history.steps == []:
+            return None
+        last_step = self.history.undo_last_step()
+
+        from_list = [] # the tiles we are moving from
+        dest_list = [] # the destination of the tiles
+
+        for m in last_step.neighbors_moves:
+            t = m.tile
+            (from_i, from_j) = m.from_source
+
+            from_list.append(m.to_dest)
+            dest_list.append(m.from_source)
+
+            t.move(from_i, from_j)
+            self.board[from_i][from_j] = t
+        for t in last_step.cluster:
+            self.board[t.i][t.j] = t
+            dest_list.append((t.i, t.j))
+
+        for coord in from_list:
+            if coord not in dest_list:
+                (i,j) = coord
+                self.board[i][j] = None
+
+        self.tile_count = len(last_step.cluster)
+        return last_step
+
     def process_click_mouse_down(self, mouse_coord):
         clicked_tile = self.get_tile_from_coord(mouse_coord)
         if clicked_tile is not None:
             self.tile_on_mouse_down = clicked_tile
-            #print(str(self.tile_on_mouse_down))
+            # print(str(self.tile_on_mouse_down))
 
     def process_click_mouse_up(self, mouse_coord):
         clicked_tile = self.get_tile_from_coord(mouse_coord)
-        #print("DEBUG tile_mouse_down : " + str(tile_on_mouse_down.i) + "," + str(tile_on_mouse_down.j) ) if tile_on_mouse_down else print("DEBUG tile_on_mouse_down is None")
-        #print("DEBUG clicked tile : " + str(clicked_tile.i) + "," + str(clicked_tile.j) ) if clicked_tile else print("DEBUG clicked_tile is None")
+        # print("DEBUG tile_mouse_down : " + str(tile_on_mouse_down.i) + "," + str(tile_on_mouse_down.j) ) if tile_on_mouse_down else print("DEBUG tile_on_mouse_down is None")
+        # print("DEBUG clicked tile : " + str(clicked_tile.i) + "," + str(clicked_tile.j) ) if clicked_tile else print("DEBUG clicked_tile is None")
         connected_tiles_mouse_down = self.get_connected_tiles(self.tile_on_mouse_down) if self.tile_on_mouse_down and clicked_tile else []
         same_cluster = next((t for t in connected_tiles_mouse_down if t.i == clicked_tile.i and t.j == clicked_tile.j), None)
         if clicked_tile and same_cluster:
             self.tile_on_mouse_down = None
             print("clicked : " + str(clicked_tile))
 
-            bg_to_draw = [] # list of Tile_Image_Element that represents the background to draw
-            sides_to_draw = [] # list of Tile_Image_Element
+            bg_to_draw = []  # list of Tile_Image_Element that represents the background to draw
+            sides_to_draw = []  # list of Tile_Image_Element
 
             connected_tiles = connected_tiles_mouse_down
             if len(connected_tiles) > 1:
@@ -548,3 +607,7 @@ class Board:
                 bg_to_draw += side_bg_to_draw
                 return (sides_to_draw, bg_to_draw)
         return None
+
+    def post_processing_movements(self):
+        self.history.add_tile_movements_to_current_step(self.sideway_moves)
+        self.history.add_tile_movements_to_current_step(self.downward_moves)
