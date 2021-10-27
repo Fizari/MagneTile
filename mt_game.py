@@ -132,6 +132,7 @@ class Game:
     background_color = Color.BACKGROUND
 
     undo_button = None
+    restart_button = None
 
     score = 0
 
@@ -153,6 +154,12 @@ class Game:
         (btn_width, btn_height) = self.get_size_of_label(self.undo_button)
         self.undo_button.update_size(btn_width, btn_height)
         self.undo_button.update_position((self.display_width / 2 - btn_width / 2, 5))
+
+        # restart button
+        self.restart_button = Label(0, 0, "restart", Color.BLACK.value)
+        (btn_width, btn_height) = self.get_size_of_label(self.restart_button)
+        self.restart_button.update_size(btn_width, btn_height)
+        self.restart_button.update_position((self.display_width / 2 - btn_width / 2, self.display_height / 2))
 
     def set_language_to_french(self):
         self.language.set_to_french()
@@ -233,6 +240,29 @@ class Game:
             tie_list += all_ties
         self.draw_ties(tie_list)
 
+    def display_end_panel(self, msg, color, font):
+        text = font.render(msg, True, color, Color.WHITE.value)
+
+        x = self.display_width / 2 -  (text.get_rect().width / 2)
+        y = self.display_height / 2 - (text.get_rect().height / 2) - (self.restart_button.height - 10)
+        self.gameDisplay.blit(text,(x,y))
+
+        self.draw_label(self.restart_button)
+
+    def display_win_screen(self):
+        font = pygame.font.SysFont('Comic Sans MS', 30)
+        self.display_end_panel(self.language.get_text("you_won"), Color.RED.value, font)
+
+    def display_lose_screen(self):
+        font = pygame.font.SysFont('Comic Sans MS', 30)
+        self.display_end_panel(self.language.get_text("you_lost"), Color.BLACK.value, font)
+
+    def display_end_screen(self, game_state):
+        if game_state == Game_State.WIN:
+            self.display_win_screen()
+        if game_state == Game_State.LOSE:
+            self.display_lose_screen()
+
     def run(self):
         # GAME LOOP #
         self.draw_board()
@@ -246,45 +276,63 @@ class Game:
         button_on_mouse_down = None
 
         app_running = True
+
+        coord_mouse_down = None
+        coord_mouse_up = None
+        board_clicked = False
+        undo_clicked = False
+        restart_clicked = False
+
         while app_running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     app_running = False
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                print("Mouse down")
+                coord_mouse_down = pygame.mouse.get_pos()
+                board_clicked = False
+                undo_clicked = False
+                restart_clicked = False
 
             if event.type == pygame.MOUSEBUTTONUP:
-                print("Mouse up")
+                coord_mouse_up = pygame.mouse.get_pos()
+                print("mouse_up")
+                if coord_mouse_down:
+                    if self.undo_button.is_clicked(coord_mouse_down) and self.undo_button.is_clicked(coord_mouse_up):
+                        undo_clicked = True
+                        print("Undo clicked")
+
+                    if self.board.is_clicked(coord_mouse_down) and self.board.is_clicked(coord_mouse_up):
+                        board_clicked = True
+                        print("Board clicked")
+
+                    if self.restart_button.is_clicked(coord_mouse_down) and self.restart_button.is_clicked(coord_mouse_up):
+                        restart_clicked = True
+                        print("Restart clicked")
+
+            game_clicked = coord_mouse_down and coord_mouse_up
 
             if (self.game_state == Game_State.PLAYING):
 
                 if not (processing_falling_movements or processing_sliding_movements):
 
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        mouse_pos = pygame.mouse.get_pos()
-                        if self.board.is_clicked(mouse_pos):  # board click
-                            self.board.process_click_mouse_down(mouse_pos)
+                    if game_clicked:
 
-                        if self.undo_button.is_clicked(mouse_pos):
-                            button_on_mouse_down = self.undo_button
-
-                    if event.type == pygame.MOUSEBUTTONUP:
-                        mouse_pos = pygame.mouse.get_pos()
-                        if self.board.is_clicked(mouse_pos):  # board click
-                            result_process_mouse_up = self.board.process_click_mouse_up(mouse_pos)
+                        if board_clicked:
+                            result_process_mouse_up = self.board.process_click(coord_mouse_down, coord_mouse_up)
                             if result_process_mouse_up:
                                 (sides_to_draw, bg_to_draw) = result_process_mouse_up
                                 processing_falling_movements = True
                                 pygame.display.update()
 
-                        if self.undo_button.is_clicked(mouse_pos) and button_on_mouse_down == self.undo_button:
-                            print("Undo clicked")
-                            button_on_mouse_down = None
+                        if undo_clicked:
                             last_hist_step = self.board.undo_step()
                             if (last_hist_step):
                                 self.draw_board()
                                 pygame.display.update()
+
+                        coord_mouse_down = None
+                        coord_mouse_up = None
 
                 else:
                     self.draw_background_tiles(bg_to_draw)
@@ -315,5 +363,29 @@ class Game:
                     pygame.display.update()
 
             else:  # GAME OVER
-                print("game over")
+                if self.game_state != Game_State.FINISHED:
+                    print("game over")
+                    self.display_end_screen(self.game_state)
+                    self.game_state = Game_State.FINISHED
+                    pygame.display.update()
+                    coord_mouse_down = None
+                    coord_mouse_up = None
+                else: # Game is idle
+                    if game_clicked:
+                        print("clicked when finished")
+                        if undo_clicked:
+                            last_hist_step = self.board.undo_step()
+                            if (last_hist_step):
+                                self.draw_board()
+                                pygame.display.update()
+
+                        if restart_clicked:
+                            # Restarts the game
+                            self.board.reset()
+                            self.draw_board()
+                        self.game_state = Game_State.PLAYING
+
+                    coord_mouse_down = None
+                    coord_mouse_up = None
+
             self.clock.tick(self.fps)

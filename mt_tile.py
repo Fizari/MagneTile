@@ -10,6 +10,9 @@ class Tile_Image_Element:
         self.tile = tile
         self.section = section
 
+    def __str__(self):
+        return "TIE : " + str(self.section) + " | " + str(self.tile)
+
 
 class Tile:
     """ Represents a Tile in space """
@@ -131,7 +134,7 @@ class Tile:
         return mouse_x >= x and mouse_y >= y and mouse_x <= (x + self.TILE_WIDTH) and mouse_y <= (y + self.TILE_HEIGHT)
 
     def __str__(self):
-        return "TILE(" + str(self.i) + "," + str(self.j) + ")"
+        return "TILE[" + str(self.i) + "," + str(self.j) + "] " + str(self.coord)
 
 
 class Tile_Movement:

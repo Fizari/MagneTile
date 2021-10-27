@@ -286,7 +286,7 @@ class Tile:
             return False
 
     def  __str__(self):
-        return "TILE("+str(self.i)+","+str(self.j)+")"
+        return "TILE["+str(self.i)+","+str(self.j)+"] (" + str(self.rect.x) + ", " + str(self.rect.y) + ")"
 
 class Tile_Movement():
     tile = None

@@ -37,8 +37,8 @@ class Board:
         self.board_width = col_nb * Tile.TILE_WIDTH
         self.board_height = row_nb * Tile.TILE_HEIGHT
         self.history = History()
-        # self.initialize_custom()
-        self.initialize_random(color_nb, col_nb, row_nb)
+        self.initialize_custom()
+        # self.initialize_random(color_nb, col_nb, row_nb)
         # seed random number generator
         seed(time.time())
 
@@ -154,6 +154,10 @@ class Board:
                 last_color = color
 
                 self.board[i].append(new_tile)
+
+    def reset(self):
+        self.initialize_random(self.color_nb, self.col_nb, self.row_nb)
+        self.history = History()
 
     ### 
     # Checks the whole board is the game is over (won or lost)
@@ -307,7 +311,7 @@ class Board:
         res = []
         for m in moves:
             t = m.tile
-            res.append(t.get_tie_center())
+            res.append(self.create_background_tie(Image_Section.CENTER, t.coord)) 
         return res
 
     def convert_tile_position_for_comparison(self, tile):
@@ -574,21 +578,17 @@ class Board:
         self.tile_count = len(last_step.cluster)
         return last_step
 
-    def process_click_mouse_down(self, mouse_coord):
-        clicked_tile = self.get_tile_from_coord(mouse_coord)
-        if clicked_tile is not None:
-            self.tile_on_mouse_down = clicked_tile
-            # print(str(self.tile_on_mouse_down))
+    def process_click(self, mouse_coord_down, mouse_coord_up):
+        clicked_tile_down = self.get_tile_from_coord(mouse_coord_down)
+        clicked_tile_up = self.get_tile_from_coord(mouse_coord_up)
 
-    def process_click_mouse_up(self, mouse_coord):
-        clicked_tile = self.get_tile_from_coord(mouse_coord)
-        # print("DEBUG tile_mouse_down : " + str(tile_on_mouse_down.i) + "," + str(tile_on_mouse_down.j) ) if tile_on_mouse_down else print("DEBUG tile_on_mouse_down is None")
-        # print("DEBUG clicked tile : " + str(clicked_tile.i) + "," + str(clicked_tile.j) ) if clicked_tile else print("DEBUG clicked_tile is None")
-        connected_tiles_mouse_down = self.get_connected_tiles(self.tile_on_mouse_down) if self.tile_on_mouse_down and clicked_tile else []
-        same_cluster = next((t for t in connected_tiles_mouse_down if t.i == clicked_tile.i and t.j == clicked_tile.j), None)
-        if clicked_tile and same_cluster:
-            self.tile_on_mouse_down = None
-            print("clicked : " + str(clicked_tile))
+        if not clicked_tile_down or not clicked_tile_up:
+            return None
+
+        connected_tiles_mouse_down = self.get_connected_tiles(clicked_tile_down)
+        same_cluster = next((t for t in connected_tiles_mouse_down if t.i == clicked_tile_up.i and t.j == clicked_tile_up.j), None)
+        if same_cluster:
+            print("clicked : " + str(clicked_tile_up))
 
             bg_to_draw = []  # list of Tile_Image_Element that represents the background to draw
             sides_to_draw = []  # list of Tile_Image_Element
@@ -605,6 +605,7 @@ class Board:
                 bg_to_draw = bg_to_draw + self.compute_background_to_draw(self.downward_moves)
                 (sides_to_draw, side_bg_to_draw) = self.compute_sides_to_draw(connected_tiles, self.downward_moves)
                 bg_to_draw += side_bg_to_draw
+
                 return (sides_to_draw, bg_to_draw)
         return None
 

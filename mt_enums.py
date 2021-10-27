@@ -22,6 +22,7 @@ class Game_State(enum.Enum):
     WIN = 1
     LOSE = 2
     PLAYING = 3
+    FINISHED = 4
 
 
 class Direction(enum.Enum):
