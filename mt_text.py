@@ -5,6 +5,7 @@ class Label:
     """ Represents a non clickable text without background """
     coord = (0, 0)
     text_color = Color.BLACK.value
+    background_color = Color.WHITE.value
     text = ""
     font_name = "Comic Sans MS"
     font_size = 30
@@ -12,13 +13,14 @@ class Label:
     width = 0
     height = 0
 
-    def __init__(self, x, y, text, text_color=Color.BLACK.value, font_name='Comic Sans MS', font_size=30):
+    def __init__(self, x, y, text, text_color=Color.BLACK.value, font_name='Comic Sans MS', font_size=30, background_color=None):
         """ (x,y) are the coordinates of the text on the screen """
         self.coord = (x, y)
         self.text = text
         self.text_color = text_color
         self.font_name = font_name
         self.font_size = font_size
+        self.background_color = background_color
 
     def update(self, text):
         self.text = text

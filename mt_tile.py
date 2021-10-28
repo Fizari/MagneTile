@@ -22,13 +22,14 @@ class Tile:
     TILE_HEIGHT = 0
     X_OFFSET = 0
     Y_OFFSET = 0
+    SPEED = 6  # SPEED when drawing
+    ACCELERATION = 1.05  # acceleration factor
+    RESET_SPEED = SPEED
 
     i = 0
     j = 0
     coord = (0, 0)  # coordinates on the screen
     color = None  # /!\ Color enum (not Tuple)
-    speed = 6  # speed when drawing
-    k = 1.05  # acceleration factor
 
     def __init__(self, i, j, color):
         self.i = i
@@ -77,31 +78,31 @@ class Tile:
         return curr_x == supposed_x and curr_y == supposed_y
 
     def __accelerate(self):
-        self.speed *= self.k
+        self.SPEED *= self.ACCELERATION
 
-    def __stop_speed(self):
-        self.speed = 6
+    def __stop_SPEED(self):
+        self.SPEED = self.RESET_SPEED
 
     def fall_to(self, i, j):
         """Draws the tile falling toward (i,j), only the coordinates of the tile are moving, not the (i,j) coordinates"""
         (curr_x, curr_y) = self.coord
         (dest_x, dest_y) = self.get_coord_from_grid_pos(i, j)
-        if curr_y + self.speed >= dest_y:
-            self.__stop_speed()
+        if curr_y + self.SPEED >= dest_y:
+            self.__stop_SPEED()
             return True
         else:
             self.__accelerate()
-            self.coord = (curr_x, curr_y + self.speed)
+            self.coord = (curr_x, curr_y + self.SPEED)
             return False
 
     def slide_left_to(self, i, j):
         """Draws the tile sliding left toward (i,j), same as fall_to(self, i, j)"""
         (curr_x, curr_y) = self.coord
         (dest_x, dest_y) = self.get_coord_from_grid_pos(i, j)
-        if curr_x - self.speed <= dest_x:
+        if curr_x - self.SPEED <= dest_x:
             return True
         else:
-            self.coord = (curr_x - self.speed, curr_y)
+            self.coord = (curr_x - self.SPEED, curr_y)
             return False
 
     def get_tie_center(self):

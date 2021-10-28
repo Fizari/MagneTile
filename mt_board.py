@@ -37,8 +37,8 @@ class Board:
         self.board_width = col_nb * Tile.TILE_WIDTH
         self.board_height = row_nb * Tile.TILE_HEIGHT
         self.history = History()
-        self.initialize_custom()
-        # self.initialize_random(color_nb, col_nb, row_nb)
+        # self.initialize_custom(4, 9, 7)
+        self.initialize_random(color_nb, col_nb, row_nb)
         # seed random number generator
         seed(time.time())
 
@@ -62,7 +62,10 @@ class Board:
     ###
     # TEMPORARY for testing
     ###
-    def initialize_custom(self):
+    def initialize_custom(self, color_nb, col_nb, row_nb):
+        self.row_nb = row_nb
+        self.col_nb = col_nb
+        self.color_nb = color_nb
         template = [
             [Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,   Color.BLUE,    Color.BLUE,   Color.GREEN],
             [None,         Color.GREEN,  Color.RED,    Color.RED,    Color.RED,     Color.RED,    Color.GREEN],

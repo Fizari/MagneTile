@@ -123,16 +123,18 @@ class Game:
     language = None
     game_state = None
 
-    display_width = 1100
+    display_width = 1280
     display_height = 720
     # to center the board in the window
     offset_board_x = 0
     tool_bar_height = 50
-    fps = 60
+    fps = 120
     background_color = Color.BACKGROUND
 
     undo_button = None
     restart_button = None
+    tile_count_label = None
+    tile_counter_label = None
 
     score = 0
 
@@ -140,6 +142,10 @@ class Game:
         # setting statics
         Tile.TILE_WIDTH = 45
         Tile.TILE_HEIGHT = int(1.6 * Tile.TILE_WIDTH)
+        ratio_speed = self.fps / 60
+        Tile.SPEED = Tile.SPEED / ratio_speed
+        Tile.RESET_SPEED = Tile.SPEED
+        Tile.ACCELERATION = 1 + ((Tile.ACCELERATION - 1) / ratio_speed)
 
         pygame.init()
         self.gameDisplay = pygame.display.set_mode((self.display_width, self.display_height))
@@ -151,15 +157,28 @@ class Game:
 
         # undo button
         self.undo_button = Label(0, 0, "undo", Color.BLACK.value)
+        self.undo_button.background_color = Color.WHITE
         (btn_width, btn_height) = self.get_size_of_label(self.undo_button)
         self.undo_button.update_size(btn_width, btn_height)
         self.undo_button.update_position((self.display_width / 2 - btn_width / 2, 5))
 
         # restart button
         self.restart_button = Label(0, 0, "restart", Color.BLACK.value)
+        self.restart_button.background_color = Color.WHITE
         (btn_width, btn_height) = self.get_size_of_label(self.restart_button)
         self.restart_button.update_size(btn_width, btn_height)
         self.restart_button.update_position((self.display_width / 2 - btn_width / 2, self.display_height / 2))
+
+        # tile count label
+        self.tile_count_label = Label(10, 5, "tile_count", Color.BLACK.value)
+        (btn_width, btn_height) = self.get_size_of_label(self.tile_count_label)
+        self.tile_count_label.update_size(btn_width, btn_height)
+
+        # tile counter
+        self.tile_counter_label = Label(self.tile_count_label.width + 5, 5, "0", Color.BLACK.value)
+        self.tile_counter_label.background_color = self.background_color
+        (btn_width, btn_height) = self.get_size_of_label(self.tile_counter_label, False)
+        self.tile_counter_label.update_size(btn_width, btn_height)
 
     def set_language_to_french(self):
         self.language.set_to_french()
@@ -174,15 +193,39 @@ class Game:
         Tile.Y_OFFSET = self.tool_bar_height
         self.board = Board(color_nb, col_nb, row_nb)
 
-    def draw_label(self, label):
+    def draw_label_raw(self, label):
+        # Draws the label without translation # 
+        self.draw_label(label,False)
+
+    def draw_label(self, label, with_translation=True):
+        text_to_display = label.text
+        if with_translation:
+            text_to_display = self.language.get_text(label.text)
+
         text_font = pygame.font.SysFont(label.font_name, label.font_size)
-        text_render = text_font.render(self.language.get_text(label.text), True, label.text_color)
+        text_render = text_font.render(text_to_display, True, label.text_color)
+        if label.background_color:
+            (label_x, label_y) = label.coord
+            pygame.draw.rect(self.gameDisplay, label.background_color.value, (label_x, label_y, label.width, label.height))
         self.gameDisplay.blit(text_render, label.coord)
 
-    def get_size_of_label(self, label):
+    def draw_tile_count(self):
+        (x, y) = self.tile_counter_label.coord
+        pygame.draw.rect(self.gameDisplay, self.background_color.value, (x, y, self.tile_counter_label.width, self.tile_counter_label.height))
+        self.tile_counter_label.text = str(self.board.tile_count)
+        (new_width, new_height) = self.get_size_of_label(self.tile_counter_label, False)
+        self.tile_counter_label.update_size(new_width, new_height)
+
+        self.draw_label_raw(self.tile_counter_label)
+
+    def get_size_of_label(self, label, with_translation=True):
+        text_to_display = label.text
+        if with_translation:
+            text_to_display = self.language.get_text(label.text)
+
         text_font = pygame.font.SysFont(label.font_name, label.font_size)
-        text_render = text_font.render(label.text, True, label.text_color)
-        return (text_render.get_rect().width, text_render.get_rect().height)
+        text_render = text_font.render(text_to_display, True, label.text_color)
+        return text_render.get_size()
 
     ###
     # Draws a TIE (Tile_Image_Element)
@@ -220,6 +263,8 @@ class Game:
         for tie in ties_to_draw:
             self.draw_tie(tie)
         self.draw_label(self.undo_button)
+        self.draw_label(self.tile_count_label)
+        self.draw_tile_count()
 
     ###
     # Draws the list of Tile_Image_Element bg_to_draw on the screen
@@ -243,7 +288,7 @@ class Game:
     def display_end_panel(self, msg, color, font):
         text = font.render(msg, True, color, Color.WHITE.value)
 
-        x = self.display_width / 2 -  (text.get_rect().width / 2)
+        x = self.display_width / 2 - (text.get_rect().width / 2)
         y = self.display_height / 2 - (text.get_rect().height / 2) - (self.restart_button.height - 10)
         self.gameDisplay.blit(text,(x,y))
 
@@ -296,7 +341,6 @@ class Game:
 
             if event.type == pygame.MOUSEBUTTONUP:
                 coord_mouse_up = pygame.mouse.get_pos()
-                print("mouse_up")
                 if coord_mouse_down:
                     if self.undo_button.is_clicked(coord_mouse_down) and self.undo_button.is_clicked(coord_mouse_up):
                         undo_clicked = True
@@ -311,6 +355,8 @@ class Game:
                         print("Restart clicked")
 
             game_clicked = coord_mouse_down and coord_mouse_up
+            if game_clicked:
+                print("Game clicked")
 
             if (self.game_state == Game_State.PLAYING):
 
@@ -323,6 +369,7 @@ class Game:
                             if result_process_mouse_up:
                                 (sides_to_draw, bg_to_draw) = result_process_mouse_up
                                 processing_falling_movements = True
+                                self.draw_tile_count()
                                 pygame.display.update()
 
                         if undo_clicked:
@@ -342,6 +389,7 @@ class Game:
                         processing_falling_movements = not self.board.moves_tiles_downward()
 
                         self.draw_ties(sides_to_draw)
+
                     if not processing_falling_movements:
 
                         if not processing_sliding_movements:
@@ -353,6 +401,7 @@ class Game:
                             # Sliding tiles
                             processing_sliding_movements = not self.board.moves_tiles_left()
                             self.draw_moving_tiles(self.board.sideway_moves)
+
                     if not (processing_falling_movements or processing_sliding_movements):
                         # Finished moving tiles
                         bg_to_draw = []
@@ -377,15 +426,17 @@ class Game:
                             last_hist_step = self.board.undo_step()
                             if (last_hist_step):
                                 self.draw_board()
+                                self.game_state = Game_State.PLAYING
                                 pygame.display.update()
 
                         if restart_clicked:
                             # Restarts the game
                             self.board.reset()
                             self.draw_board()
-                        self.game_state = Game_State.PLAYING
+                            self.game_state = Game_State.PLAYING
+                            pygame.display.update()
 
-                    coord_mouse_down = None
-                    coord_mouse_up = None
+                        coord_mouse_down = None
+                        coord_mouse_up = None
 
             self.clock.tick(self.fps)
