@@ -22,14 +22,16 @@ class Game_Language:
             "restart": "Rejouer",
             "you_won": "Vous avez gagné !! :)",
             "you_lost": "Vous avez perdu",
-            "tile_count": "Tuiles : "
+            "tile_count": "Tuiles : ",
+            "score": "Score : "
         }
         self.english_text_map = {
             "undo": "Undo",
             "restart": "Play again",
             "you_won": "You won !! :)",
             "you_lost": "You lost",
-            "tile_count": "Tiles : "
+            "tile_count": "Tiles : ",
+            "score": "Score : "
         }
         self.set_to_english()  # default value
 
@@ -135,6 +137,7 @@ class Game:
     restart_button = None
     tile_count_label = None
     tile_counter_label = None
+    score_counter_label = None
 
     score = 0
 
@@ -175,10 +178,17 @@ class Game:
         self.tile_count_label.update_size(btn_width, btn_height)
 
         # tile counter
-        self.tile_counter_label = Label(self.tile_count_label.width + 5, 5, "0", Color.BLACK.value)
+        self.tile_counter_label = Label(self.tile_count_label.width + 7, 5, "0", Color.BLACK.value)
         self.tile_counter_label.background_color = self.background_color
         (btn_width, btn_height) = self.get_size_of_label(self.tile_counter_label, False)
         self.tile_counter_label.update_size(btn_width, btn_height)
+
+        # score counter
+        self.score_counter_label = Label(0, 5, "0", Color.RED.value)
+        self.score_counter_label.background_color = self.background_color
+        (btn_width, btn_height) = self.get_size_of_label(self.score_counter_label, False)
+        self.score_counter_label.update_size(btn_width, btn_height)
+        self.score_counter_label.update_position((self.display_width - btn_width - 10, 5))
 
     def set_language_to_french(self):
         self.language.set_to_french()
@@ -194,8 +204,8 @@ class Game:
         self.board = Board(color_nb, col_nb, row_nb)
 
     def draw_label_raw(self, label):
-        # Draws the label without translation # 
-        self.draw_label(label,False)
+        # Draws the label without translation #
+        self.draw_label(label, False)
 
     def draw_label(self, label, with_translation=True):
         text_to_display = label.text
@@ -204,19 +214,33 @@ class Game:
 
         text_font = pygame.font.SysFont(label.font_name, label.font_size)
         text_render = text_font.render(text_to_display, True, label.text_color)
+        (width, height) = text_render.get_size()
+        label.update_size(width, height)
         if label.background_color:
             (label_x, label_y) = label.coord
-            pygame.draw.rect(self.gameDisplay, label.background_color.value, (label_x, label_y, label.width, label.height))
+            pygame.draw.rect(self.gameDisplay, label.background_color.value, (label_x, label_y, width, height))
         self.gameDisplay.blit(text_render, label.coord)
 
     def draw_tile_count(self):
         (x, y) = self.tile_counter_label.coord
+        x = self.tile_count_label.width + 7
+        self.tile_counter_label.update_position((x, y))
         pygame.draw.rect(self.gameDisplay, self.background_color.value, (x, y, self.tile_counter_label.width, self.tile_counter_label.height))
         self.tile_counter_label.text = str(self.board.tile_count)
         (new_width, new_height) = self.get_size_of_label(self.tile_counter_label, False)
         self.tile_counter_label.update_size(new_width, new_height)
 
         self.draw_label_raw(self.tile_counter_label)
+
+    def draw_score_count(self):
+        (x, y) = self.score_counter_label.coord
+        pygame.draw.rect(self.gameDisplay, self.background_color.value, (x, y, self.score_counter_label.width, self.score_counter_label.height))
+        self.score_counter_label.text = str(self.board.score_count)
+        (new_width, new_height) = self.get_size_of_label(self.score_counter_label, False)
+        self.score_counter_label.update_size(new_width, new_height)
+        self.score_counter_label.update_position((self.display_width - new_width - 10, y))
+
+        self.draw_label_raw(self.score_counter_label)
 
     def get_size_of_label(self, label, with_translation=True):
         text_to_display = label.text
@@ -265,6 +289,7 @@ class Game:
         self.draw_label(self.undo_button)
         self.draw_label(self.tile_count_label)
         self.draw_tile_count()
+        self.draw_score_count()
 
     ###
     # Draws the list of Tile_Image_Element bg_to_draw on the screen
@@ -290,7 +315,7 @@ class Game:
 
         x = self.display_width / 2 - (text.get_rect().width / 2)
         y = self.display_height / 2 - (text.get_rect().height / 2) - (self.restart_button.height - 10)
-        self.gameDisplay.blit(text,(x,y))
+        self.gameDisplay.blit(text, (x, y))
 
         self.draw_label(self.restart_button)
 
@@ -317,8 +342,6 @@ class Game:
         processing_sliding_movements = False
         bg_to_draw = []  # list of Tile_Image_Element that represents the background to draw
         sides_to_draw = []  # list of Tile_Image_Element
-
-        button_on_mouse_down = None
 
         app_running = True
 
@@ -370,6 +393,7 @@ class Game:
                                 (sides_to_draw, bg_to_draw) = result_process_mouse_up
                                 processing_falling_movements = True
                                 self.draw_tile_count()
+                                self.draw_score_count()
                                 pygame.display.update()
 
                         if undo_clicked:
@@ -419,7 +443,7 @@ class Game:
                     pygame.display.update()
                     coord_mouse_down = None
                     coord_mouse_up = None
-                else: # Game is idle
+                else:  # Game is idle
                     if game_clicked:
                         print("clicked when finished")
                         if undo_clicked:

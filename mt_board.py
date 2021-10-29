@@ -17,6 +17,7 @@ class Board:
     row_nb = 0
     tile_count = 0
     color_nb = 0
+    score_count = 0
 
     board_coord = (0, 0)
     board_width = 0
@@ -36,6 +37,7 @@ class Board:
         self.board_coord = (Tile.X_OFFSET, Tile.Y_OFFSET)
         self.board_width = col_nb * Tile.TILE_WIDTH
         self.board_height = row_nb * Tile.TILE_HEIGHT
+        self.score_count = 0
         self.history = History()
         # self.initialize_custom(4, 9, 7)
         self.initialize_random(color_nb, col_nb, row_nb)
@@ -161,6 +163,7 @@ class Board:
     def reset(self):
         self.initialize_random(self.color_nb, self.col_nb, self.row_nb)
         self.history = History()
+        self.score_count = 0
 
     ### 
     # Checks the whole board is the game is over (won or lost)
@@ -579,7 +582,11 @@ class Board:
                 self.board[i][j] = None
 
         self.tile_count = len(last_step.cluster)
+        self.score_count -= self.calculate_score(len(last_step.cluster))
         return last_step
+
+    def calculate_score(self, nb_of_tiles):
+        return nb_of_tiles * 100 + (nb_of_tiles - 2) * 50
 
     def process_click(self, mouse_coord_down, mouse_coord_up):
         clicked_tile_down = self.get_tile_from_coord(mouse_coord_down)
@@ -603,6 +610,7 @@ class Board:
                     self.board[c.i][c.j] = None
                 self.history.add_new_step(connected_tiles)
                 self.tile_count -= len(connected_tiles)
+                self.score_count += self.calculate_score(len(connected_tiles))
                 # Compute first time falling tiles
                 self.downward_moves = self.compute_downward_movements(connected_tiles)
                 bg_to_draw = bg_to_draw + self.compute_background_to_draw(self.downward_moves)
