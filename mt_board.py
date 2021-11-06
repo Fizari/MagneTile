@@ -588,6 +588,12 @@ class Board:
     def calculate_score(self, nb_of_tiles):
         return nb_of_tiles * 100 + (nb_of_tiles - 2) * 50
 
+    def calculate_end_score(self, game_won):
+        score = self.score_count
+        if game_won:
+            score += self.col_nb * 50 * ((self.col_nb * self.row_nb) % 10)
+        return score
+
     def process_click(self, mouse_coord_down, mouse_coord_up):
         clicked_tile_down = self.get_tile_from_coord(mouse_coord_down)
         clicked_tile_up = self.get_tile_from_coord(mouse_coord_up)

@@ -5,6 +5,7 @@ class Color(enum.Enum):
     BLACK = (0, 0, 0)
     WHITE = (255, 255, 255)
     GRAY = (175, 185, 204)
+    DARK_GRAY = (100, 100, 120)
     RED = (237, 125, 119)
     GREEN = (119, 237, 131)
     BLUE = (119, 160, 237)

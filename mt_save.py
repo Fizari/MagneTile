@@ -19,11 +19,13 @@ class Save:
         return None
 
     def __write_to_save_file(self, data):
-        f = open(self.save_fullpath, "w")
+        f = open(self.save_fullpath, "w+")
         f.write(data)
         f.close()
 
     def __read_from_save_file(self):
+        if not os.path.exists(self.save_fullpath):
+            return "0"
         f = open(self.save_fullpath, "r")
         data = f.read()
         f.close()

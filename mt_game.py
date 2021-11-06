@@ -1,7 +1,8 @@
 from mt_board import Board
 from mt_enums import Color, Game_State, Image_Section
 from mt_tile import Tile
-from mt_text import Label
+from mt_text import Label, Panel
+from mt_save import Save
 import os
 try:
     import pygame
@@ -23,7 +24,9 @@ class Game_Language:
             "you_won": "Vous avez gagné !! :)",
             "you_lost": "Vous avez perdu",
             "tile_count": "Tuiles : ",
-            "score": "Score : "
+            "score": "Score : ",
+            "highscore": "Meilleur score : ",
+            "new_highscore": "Meilleur score !"
         }
         self.english_text_map = {
             "undo": "Undo",
@@ -31,7 +34,9 @@ class Game_Language:
             "you_won": "You won !! :)",
             "you_lost": "You lost",
             "tile_count": "Tiles : ",
-            "score": "Score : "
+            "score": "Score : ",
+            "highscore": "Highscore: ",
+            "new_highscore": "New highscore !"
         }
         self.set_to_english()  # default value
 
@@ -138,8 +143,15 @@ class Game:
     tile_count_label = None
     tile_counter_label = None
     score_counter_label = None
+    new_highscore_label = None
+    highscore_counter_label = None
+    you_won_label = None
+    you_lost_label = None
+
+    end_panel = None
 
     score = 0
+    save = None
 
     def __init__(self):
         # setting statics
@@ -157,20 +169,14 @@ class Game:
         self.game_images = Game_Images()
         self.language = Game_Language()
         self.game_state = Game_State.PLAYING
+        self.save = Save()
 
         # undo button
         self.undo_button = Label(0, 0, "undo", Color.BLACK.value)
         self.undo_button.background_color = Color.WHITE
         (btn_width, btn_height) = self.get_size_of_label(self.undo_button)
         self.undo_button.update_size(btn_width, btn_height)
-        self.undo_button.update_position((self.display_width / 2 - btn_width / 2, 5))
-
-        # restart button
-        self.restart_button = Label(0, 0, "restart", Color.BLACK.value)
-        self.restart_button.background_color = Color.WHITE
-        (btn_width, btn_height) = self.get_size_of_label(self.restart_button)
-        self.restart_button.update_size(btn_width, btn_height)
-        self.restart_button.update_position((self.display_width / 2 - btn_width / 2, self.display_height / 2))
+        self.undo_button.update_position(self.display_width / 2 - btn_width / 2, 5)
 
         # tile count label
         self.tile_count_label = Label(10, 5, "tile_count", Color.BLACK.value)
@@ -188,7 +194,37 @@ class Game:
         self.score_counter_label.background_color = self.background_color
         (btn_width, btn_height) = self.get_size_of_label(self.score_counter_label, False)
         self.score_counter_label.update_size(btn_width, btn_height)
-        self.score_counter_label.update_position((self.display_width - btn_width - 10, 5))
+        self.score_counter_label.update_position(self.display_width - btn_width - 10, 5)
+
+        # end panel
+        end_panel_width = 500
+        end_panel_height = 400
+        self.end_panel = Panel((self.display_width - end_panel_width) / 2, (self.display_height - end_panel_height) / 2, end_panel_width, end_panel_height, background_color=Color.WHITE, border_thickness=5, border_color=Color.BLACK)
+
+        # winning label
+        self.you_won_label = Label(0, 5, "you_won", Color.BLACK.value, 'Comic Sans MS', 50)
+        (btn_width, btn_height) = self.get_size_of_label(self.you_won_label)
+        self.you_won_label.update_size(btn_width, btn_height)
+        self.you_won_label.update_position(self.display_width / 2 - btn_width / 2, self.end_panel.y + 40)
+
+        # losing label
+        self.you_lost_label = Label(0, 5, "you_lost", Color.BLACK.value, 'Comic Sans MS', 50)
+        (btn_width, btn_height) = self.get_size_of_label(self.you_lost_label)
+        self.you_lost_label.update_size(btn_width, btn_height)
+        self.you_lost_label.update_position(self.display_width / 2 - btn_width / 2, self.you_won_label.y)
+
+        # new highscore label
+        self.new_highscore_label = Label(0, 5, "new_highscore", Color.RED.value, 'Comic Sans MS', 25)
+        (btn_width, btn_height) = self.get_size_of_label(self.new_highscore_label)
+        self.new_highscore_label.update_size(btn_width, btn_height)
+        self.new_highscore_label.update_position(self.display_width / 2 - btn_width / 2, self.you_won_label.y + self.you_won_label.height + 75)
+
+        # restart button
+        self.restart_button = Label(0, 0, "restart", Color.BLACK.value)
+        self.restart_button.background_color = Color.LIGHT_BLUE
+        (btn_width, btn_height) = self.get_size_of_label(self.restart_button)
+        self.restart_button.update_size(btn_width, btn_height)
+        self.restart_button.update_position(self.display_width / 2 - btn_width / 2, self.end_panel.y + self.end_panel.height - btn_height - 50)
 
     def set_language_to_french(self):
         self.language.set_to_french()
@@ -217,14 +253,13 @@ class Game:
         (width, height) = text_render.get_size()
         label.update_size(width, height)
         if label.background_color:
-            (label_x, label_y) = label.coord
-            pygame.draw.rect(self.gameDisplay, label.background_color.value, (label_x, label_y, width, height))
-        self.gameDisplay.blit(text_render, label.coord)
+            pygame.draw.rect(self.gameDisplay, label.background_color.value, (label.x, label.y, width, height))
+        self.gameDisplay.blit(text_render, label.get_coord())
 
     def draw_tile_count(self):
-        (x, y) = self.tile_counter_label.coord
+        (x, y) = self.tile_counter_label.get_coord()
         x = self.tile_count_label.width + 7
-        self.tile_counter_label.update_position((x, y))
+        self.tile_counter_label.update_position(x, y)
         pygame.draw.rect(self.gameDisplay, self.background_color.value, (x, y, self.tile_counter_label.width, self.tile_counter_label.height))
         self.tile_counter_label.text = str(self.board.tile_count)
         (new_width, new_height) = self.get_size_of_label(self.tile_counter_label, False)
@@ -232,15 +267,37 @@ class Game:
 
         self.draw_label_raw(self.tile_counter_label)
 
+    def hide_score_count(self):
+        pygame.draw.rect(self.gameDisplay, self.background_color.value, (self.score_counter_label.x, self.score_counter_label.y, self.score_counter_label.width, self.score_counter_label.height))
+
     def draw_score_count(self):
-        (x, y) = self.score_counter_label.coord
-        pygame.draw.rect(self.gameDisplay, self.background_color.value, (x, y, self.score_counter_label.width, self.score_counter_label.height))
+        self.hide_score_count()
+        (x, y) = self.score_counter_label.get_coord()
         self.score_counter_label.text = str(self.board.score_count)
         (new_width, new_height) = self.get_size_of_label(self.score_counter_label, False)
         self.score_counter_label.update_size(new_width, new_height)
-        self.score_counter_label.update_position((self.display_width - new_width - 10, y))
+        self.score_counter_label.update_position(self.display_width - new_width - 10, y)
 
         self.draw_label_raw(self.score_counter_label)
+
+    def draw_end_score(self):
+        end_score_text = self.language.get_text("score") + str(self.board.calculate_end_score(self.game_state == Game_State.WIN))
+        self.end_score_label = Label(0, 0, end_score_text, Color.BLACK.value)
+        (new_width, new_height) = self.get_size_of_label(self.end_score_label, False)
+        self.end_score_label.update_size(new_width, new_height)
+        self.end_score_label.update_position((self.display_width - new_width) / 2, self.you_won_label.y + self.you_won_label.height + 30)
+
+        self.draw_label_raw(self.end_score_label)
+
+    def draw_highscore(self):
+        highscore = self.save.get_highscore()
+        highscore_text = self.language.get_text("highscore") + str(highscore)
+        self.highscore_label = Label(0, 0, highscore_text, Color.DARK_GRAY.value, 'Comic Sans MS', 25)
+        (new_width, new_height) = self.get_size_of_label(self.highscore_label, False)
+        self.highscore_label.update_size(new_width, new_height)
+        self.highscore_label.update_position((self.display_width - new_width) / 2, self.end_score_label.y + self.end_score_label.height)
+
+        self.draw_label_raw(self.highscore_label)
 
     def get_size_of_label(self, label, with_translation=True):
         text_to_display = label.text
@@ -250,6 +307,18 @@ class Game:
         text_font = pygame.font.SysFont(label.font_name, label.font_size)
         text_render = text_font.render(text_to_display, True, label.text_color)
         return text_render.get_size()
+
+    def draw_panel(self, panel):
+        pygame.draw.rect(self.gameDisplay, panel.background_color.value, (panel.x, panel.y, panel.width, panel.height))
+        if panel.border_thickness and panel.border_thickness > 0:
+            (x, y, width, height) = panel.get_rect_border_left()
+            pygame.draw.rect(self.gameDisplay, panel.border_color.value, (x, y, width, height))
+            (x, y, width, height) = panel.get_rect_border_right()
+            pygame.draw.rect(self.gameDisplay, panel.border_color.value, (x, y, width, height))
+            (x, y, width, height) = panel.get_rect_border_top()
+            pygame.draw.rect(self.gameDisplay, panel.border_color.value, (x, y, width, height))
+            (x, y, width, height) = panel.get_rect_border_bottom()
+            pygame.draw.rect(self.gameDisplay, panel.border_color.value, (x, y, width, height))
 
     ###
     # Draws a TIE (Tile_Image_Element)
@@ -310,28 +379,31 @@ class Game:
             tie_list += all_ties
         self.draw_ties(tie_list)
 
-    def display_end_panel(self, msg, color, font):
-        text = font.render(msg, True, color, Color.WHITE.value)
-
-        x = self.display_width / 2 - (text.get_rect().width / 2)
-        y = self.display_height / 2 - (text.get_rect().height / 2) - (self.restart_button.height - 10)
-        self.gameDisplay.blit(text, (x, y))
+    def display_end_panel(self, label, new_highscore):
+        self.hide_score_count()
+        self.draw_panel(self.end_panel)
+        self.draw_label(label)
+        self.draw_end_score()
+        if not new_highscore:
+            self.draw_highscore()
+        else:
+            self.draw_label(self.new_highscore_label)
 
         self.draw_label(self.restart_button)
 
-    def display_win_screen(self):
-        font = pygame.font.SysFont('Comic Sans MS', 30)
-        self.display_end_panel(self.language.get_text("you_won"), Color.RED.value, font)
-
-    def display_lose_screen(self):
-        font = pygame.font.SysFont('Comic Sans MS', 30)
-        self.display_end_panel(self.language.get_text("you_lost"), Color.BLACK.value, font)
-
-    def display_end_screen(self, game_state):
+    def display_end_screen(self, game_state, new_highscore):
         if game_state == Game_State.WIN:
-            self.display_win_screen()
+            self.display_end_panel(self.you_won_label, new_highscore)
         if game_state == Game_State.LOSE:
-            self.display_lose_screen()
+            self.display_end_panel(self.you_lost_label, new_highscore)
+
+    def compute_highscore(self, game_won):
+        highscore = self.save.get_highscore()
+        new_highscore = self.board.calculate_end_score(game_won)
+        if highscore < new_highscore:
+            self.save.save_highscore(new_highscore)
+            return True
+        return False
 
     def run(self):
         # GAME LOOP #
@@ -437,15 +509,15 @@ class Game:
 
             else:  # GAME OVER
                 if self.game_state != Game_State.FINISHED:
-                    print("game over")
-                    self.display_end_screen(self.game_state)
+                    game_won = self.game_state == Game_State.WIN
+                    new_highscore = self.compute_highscore(game_won)
+                    self.display_end_screen(self.game_state, new_highscore)
                     self.game_state = Game_State.FINISHED
                     pygame.display.update()
                     coord_mouse_down = None
                     coord_mouse_up = None
                 else:  # Game is idle
                     if game_clicked:
-                        print("clicked when finished")
                         if undo_clicked:
                             last_hist_step = self.board.undo_step()
                             if (last_hist_step):
