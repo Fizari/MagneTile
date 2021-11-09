@@ -47,8 +47,11 @@ def main():
 
     col_nb = 22
     row_nb = 9
+    # game.initialize_board(3, col_nb, row_nb)
     game.initialize_board(number_of_color, col_nb, row_nb)
     game.run()
+    # game.run_stats(10000)
+    # game.run_auto_play()
 
 
 main()

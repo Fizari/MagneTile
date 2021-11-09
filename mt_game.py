@@ -3,7 +3,9 @@ from mt_enums import Color, Game_State, Image_Section
 from mt_tile import Tile
 from mt_text import Label, Panel
 from mt_save import Save
+import statistics
 import os
+import time
 try:
     import pygame
 except ModuleNotFoundError:
@@ -54,7 +56,7 @@ class Game_Images:
     # Images that are gonna be drawn on the screen #
     tiles_images = None
     side_width = 10
-    bottom_height = 10
+    bottom_height = 8
     images_folder = "images"
     root_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -164,7 +166,7 @@ class Game:
 
         pygame.init()
         self.gameDisplay = pygame.display.set_mode((self.display_width, self.display_height))
-        pygame.display.set_caption('MagneTile2')
+        pygame.display.set_caption('MagneTile')
         self.clock = pygame.time.Clock()
         self.game_images = Game_Images()
         self.language = Game_Language()
@@ -233,7 +235,6 @@ class Game:
         self.language.set_to_english()
 
     def initialize_board(self, color_nb, col_nb, row_nb):
-        print("Init board")
         self.offset_board_x = (self.display_width - (col_nb * Tile.TILE_WIDTH)) / 2
         Tile.X_OFFSET = self.offset_board_x
         Tile.Y_OFFSET = self.tool_bar_height
@@ -350,7 +351,6 @@ class Game:
     # Draws the whole board on the surface
     ###
     def draw_board(self):
-        self.board.reset_tile_count()
         self.gameDisplay.fill(self.background_color.value)
         ties_to_draw = self.board.get_all_tie()
         for tie in ties_to_draw:
@@ -437,21 +437,11 @@ class Game:
             if event.type == pygame.MOUSEBUTTONUP:
                 coord_mouse_up = pygame.mouse.get_pos()
                 if coord_mouse_down:
-                    if self.undo_button.is_clicked(coord_mouse_down) and self.undo_button.is_clicked(coord_mouse_up):
-                        undo_clicked = True
-                        print("Undo clicked")
-
-                    if self.board.is_clicked(coord_mouse_down) and self.board.is_clicked(coord_mouse_up):
-                        board_clicked = True
-                        print("Board clicked")
-
-                    if self.restart_button.is_clicked(coord_mouse_down) and self.restart_button.is_clicked(coord_mouse_up):
-                        restart_clicked = True
-                        print("Restart clicked")
+                    undo_clicked = self.undo_button.is_clicked(coord_mouse_down) and self.undo_button.is_clicked(coord_mouse_up)
+                    board_clicked = self.board.is_clicked(coord_mouse_down) and self.board.is_clicked(coord_mouse_up)
+                    restart_clicked = self.restart_button.is_clicked(coord_mouse_down) and self.restart_button.is_clicked(coord_mouse_up)
 
             game_clicked = coord_mouse_down and coord_mouse_up
-            if game_clicked:
-                print("Game clicked")
 
             if (self.game_state == Game_State.PLAYING):
 
@@ -489,7 +479,7 @@ class Game:
                     if not processing_falling_movements:
 
                         if not processing_sliding_movements:
-                            if self.board.compute_side_movements():
+                            if self.board.compute_side_movements() != []:
                                 # Compute first time sliding tiles
                                 bg_to_draw = [self.board.compute_background_to_draw_for_sliding(self.board.sideway_moves, self.game_images.side_width, self.game_images.bottom_height)]
                                 processing_sliding_movements = True
@@ -502,8 +492,9 @@ class Game:
                         # Finished moving tiles
                         bg_to_draw = []
                         sides_to_draw = []
+                        self.board.update_game_state()
                         self.game_state = self.board.check_game_over()
-                        self.board.post_processing_movements()
+                        self.board.post_processing_movement()
 
                     pygame.display.update()
 
@@ -534,5 +525,103 @@ class Game:
 
                         coord_mouse_down = None
                         coord_mouse_up = None
+
+            self.clock.tick(self.fps)
+
+    def run_stats(self, nb_iter):
+        # GAME LOOP WITH BOT PLAYING FOR STATS (NO GUI) #
+        game_played_cpt = 0
+        nb_game_lost = 0
+        nb_game_won = 0
+        cluster_clicked = []
+        end_tiles_nb = []
+        for i in range(nb_iter):
+            cluster_clicked.append(0)
+            end_tiles_nb.append(0)
+            game_state = Game_State.PLAYING
+            while game_state == Game_State.PLAYING:
+                cluster = self.board.pick_random_cluster()
+                cluster_clicked[i] += 1
+                self.board.resolve_new_state(cluster)
+                self.board.update_game_state()
+                self.board.post_processing_movement()
+                game_state = self.board.check_game_over()
+                if game_state != Game_State.PLAYING:
+                    if game_state == Game_State.WIN:
+                        nb_game_won += 1
+                    if game_state == Game_State.LOSE:
+                        nb_game_lost += 1
+                    end_tiles_nb[i] = self.board.tile_count
+                    self.board.revert_to_start()
+                    game_played_cpt += 1
+                    if game_played_cpt % 10 == 0:
+                        print("game played : " + str(game_played_cpt))
+        print("FINISHED :")
+        print("  GAMES WON  : " + str(nb_game_won))
+        print("  GAMES LOST : " + str(nb_game_lost))
+        print("Average clicks per game : " + str(statistics.mean(cluster_clicked)))
+        print("Average end tiles : " + str(statistics.mean(end_tiles_nb)))
+
+    def run_auto_play(self):
+        self.draw_board()
+        pygame.display.update()
+
+        processing_falling_movements = False
+        processing_sliding_movements = False
+        bg_to_draw = []  # list of Tile_Image_Element that represents the background to draw
+        sides_to_draw = []  # list of Tile_Image_Element
+
+        while (self.game_state == Game_State.PLAYING):
+            if not (processing_falling_movements or processing_sliding_movements):
+                random_cluster = list(self.board.pick_random_cluster())
+                random_tile = random_cluster[0]
+                (x_tile, y_tile) = random_tile.coord
+                coord_for_click = (x_tile + 1, y_tile + 1)
+                result_process_mouse_up = self.board.process_click(coord_for_click, coord_for_click)
+                if result_process_mouse_up:
+                    (sides_to_draw, bg_to_draw) = result_process_mouse_up
+                    processing_falling_movements = True
+                    self.draw_tile_count()
+                    self.draw_score_count()
+                    pygame.display.update()
+            else:
+                self.draw_background_tiles(bg_to_draw)
+
+                if processing_falling_movements and not processing_sliding_movements:
+                    # Falling tiles
+                    processing_falling_movements = not self.board.moves_tiles_downward()
+
+                    self.draw_ties(sides_to_draw)
+
+                if not processing_falling_movements:
+
+                    if not processing_sliding_movements:
+                        if self.board.compute_side_movements() != []:
+                            # Compute first time sliding tiles
+                            bg_to_draw = [self.board.compute_background_to_draw_for_sliding(self.board.sideway_moves, self.game_images.side_width, self.game_images.bottom_height)]
+                            processing_sliding_movements = True
+                    else:
+                        # Sliding tiles
+                        processing_sliding_movements = not self.board.moves_tiles_left()
+                        self.draw_moving_tiles(self.board.sideway_moves)
+
+                if not (processing_falling_movements or processing_sliding_movements):
+                    # Finished moving tiles
+                    bg_to_draw = []
+                    sides_to_draw = []
+                    self.board.update_game_state()
+                    self.game_state = self.board.check_game_over()
+                    self.board.post_processing_movement()
+
+                pygame.display.update()
+            if self.game_state != Game_State.PLAYING:
+                if self.game_state != Game_State.FINISHED:
+                    game_won = self.game_state == Game_State.WIN
+                    new_highscore = self.compute_highscore(game_won)
+                    self.display_end_screen(self.game_state, new_highscore)
+                    self.game_state = Game_State.FINISHED
+                    pygame.display.update()
+                else:  # Game is idle
+                    print("Game finished")
 
             self.clock.tick(self.fps)

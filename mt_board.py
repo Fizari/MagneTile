@@ -12,12 +12,11 @@ class Board:
 
     colors_rand_arr = [Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.BROWN, Color.PURPLE]
     history = None
+    board_save = []
 
     col_nb = 0
     row_nb = 0
-    tile_count = 0
     color_nb = 0
-    score_count = 0
 
     board_coord = (0, 0)
     board_width = 0
@@ -27,6 +26,12 @@ class Board:
 
     downward_moves = []  # used for the downward animation
     sideway_moves = []  # used for the sliding left animation
+
+    score_count = 0
+
+    # State of the game
+    tile_count = 0
+    clusters = []
 
     # Represents the board of the game (2D array of tiles) #
     def __init__(self, color_nb, col_nb, row_nb):
@@ -43,19 +48,6 @@ class Board:
         self.initialize_random(color_nb, col_nb, row_nb)
         # seed random number generator
         seed(time.time())
-
-    def set_tile_count(self, tile_count):
-        self.tile_count = tile_count
-
-    def get_tile_count(self):
-        return self.tile_count
-
-    def reset_tile_count(self):
-        self.tile_count = 0
-        for i in range(len(self.board)):
-            for j in range(len(self.board[i])):
-                if self.board[i][j] is not None:
-                    self.tile_count += 1
 
     def get_random_color(self):
         r = randint(0, self.color_nb - 1)
@@ -92,6 +84,7 @@ class Board:
     def initialize_random(self, color_nb, col_nb, row_nb):
         # Populates the board with a controlled randomized generation of tiles #
         self.board = []
+        self.board_save = []
         self.row_nb = row_nb
         self.col_nb = col_nb
 
@@ -105,6 +98,7 @@ class Board:
 
         for i in range(col_nb):
             self.board.append([])
+            self.board_save.append([])
             for j in range(row_nb):
                 left_neighbor = None
                 if i > 0:
@@ -159,30 +153,36 @@ class Board:
                 last_color = color
 
                 self.board[i].append(new_tile)
+                self.board_save[i].append(Tile(i, j, color))
+
+        self.update_game_state()
 
     def reset(self):
         self.initialize_random(self.color_nb, self.col_nb, self.row_nb)
         self.history = History()
         self.score_count = 0
+        self.update_game_state()
 
-    ### 
+    def revert_to_start(self):
+        self.board = self.copy_board_saved()
+        self.history = History()
+        self.score_count = 0
+        self.update_game_state()
+
+    def copy_board_saved(self):
+        new_board = []
+        for i in range(len(self.board)):
+            new_board.append([])
+            for j in range(len(self.board[i])):
+                new_board[i].append(Tile(i, j, self.board_save[i][j].color))
+        return new_board
+
+    ###
     # Checks the whole board is the game is over (won or lost)
     ###
     def check_game_over(self):
-        tiles_checked = []
-        nb_clusters = 0
-        for i in range(len(self.board)):
-            for j in range(len(self.board[i])):
-                curr_tile = self.board[i][j]
-                if curr_tile and not curr_tile in tiles_checked:
-                    cluster = self.get_connected_tiles(curr_tile)
-                    if len(cluster) > 1:
-                        nb_clusters = nb_clusters + 1
-                    for t in cluster:
-                        tiles_checked.append(t)
-
-        if nb_clusters == 0:
-            if len(tiles_checked) == 0:
+        if len(self.clusters) == 0:
+            if self.tile_count == 0:
                 return Game_State.WIN
             else:
                 return Game_State.LOSE
@@ -311,13 +311,63 @@ class Board:
         return moves
 
     ###
+    # instantly resolves the next state of the board after a cluster has been removed
+    # cluster is a list of tiles
+    ###
+    def resolve_new_state(self, cluster):
+
+        for tile in cluster:
+            self.board[tile.i][tile.j] = None
+
+        downward_moves = self.compute_downward_movements(cluster)
+        for m in downward_moves:
+            t = m.tile
+            (dest_i, dest_j) = m.to_dest
+            self.board[t.i][t.j] = None
+            self.board[dest_i][dest_j] = t
+            t.move(dest_i, dest_j)
+
+        sideway_moves = self.compute_side_movements()
+        for m in sideway_moves:
+            t = m.tile
+            (dest_i, dest_j) = m.to_dest
+            self.board[t.i][t.j] = None
+            self.board[dest_i][dest_j] = t
+            t.move(dest_i, dest_j)
+
+    def pick_random_cluster(self):
+        r = randint(0, len(self.clusters) - 1)
+        return self.clusters[r]
+
+    def update_game_state(self):
+        tiles_checked = []
+        clusters = []  # List of clusters
+        for i in range(len(self.board)):
+            for j in range(len(self.board[i])):
+                curr_tile = self.board[i][j]
+                if curr_tile and curr_tile not in tiles_checked:
+                    cluster = self.get_connected_tiles(curr_tile)
+                    if len(cluster) > 1:
+                        clusters += [cluster]
+                    for t in cluster:
+                        tiles_checked.append(t)
+
+        self.clusters = clusters
+        self.tile_count = len(tiles_checked)
+        # print("nb of clusters : " + str(len(self.clusters)))
+
+    def post_processing_movement(self):
+        self.history.add_tile_movements_to_current_step(self.sideway_moves)
+        self.history.add_tile_movements_to_current_step(self.downward_moves)
+
+    ###
     # Get a list of background (Tile_Image_Element) to draw from a list of moves for the falling of the tiles
     ###
     def compute_background_to_draw(self, moves):
         res = []
         for m in moves:
             t = m.tile
-            res.append(self.create_background_tie(Image_Section.CENTER, t.coord)) 
+            res.append(self.create_background_tie(Image_Section.CENTER, t.coord))
         return res
 
     def convert_tile_position_for_comparison(self, tile):
@@ -513,7 +563,7 @@ class Board:
                         moves.append(Tile_Movement(self.board[i][j], (i - nb_empty_col, j)))
                 found_space = False
         self.sideway_moves = moves
-        return moves != []
+        return moves
 
     def get_xy_from_ij(self, coord):
         (i, j) = coord
@@ -560,8 +610,8 @@ class Board:
             return None
         last_step = self.history.undo_last_step()
 
-        from_list = [] # the tiles we are moving from
-        dest_list = [] # the destination of the tiles
+        from_list = []  # the tiles we are moving from
+        dest_list = []  # the destination of the tiles
 
         for m in last_step.neighbors_moves:
             t = m.tile
@@ -578,10 +628,10 @@ class Board:
 
         for coord in from_list:
             if coord not in dest_list:
-                (i,j) = coord
+                (i, j) = coord
                 self.board[i][j] = None
 
-        self.tile_count = len(last_step.cluster)
+        self.update_game_state()
         self.score_count -= self.calculate_score(len(last_step.cluster))
         return last_step
 
@@ -604,7 +654,6 @@ class Board:
         connected_tiles_mouse_down = self.get_connected_tiles(clicked_tile_down)
         same_cluster = next((t for t in connected_tiles_mouse_down if t.i == clicked_tile_up.i and t.j == clicked_tile_up.j), None)
         if same_cluster:
-            print("clicked : " + str(clicked_tile_up))
 
             bg_to_draw = []  # list of Tile_Image_Element that represents the background to draw
             sides_to_draw = []  # list of Tile_Image_Element
@@ -626,6 +675,3 @@ class Board:
                 return (sides_to_draw, bg_to_draw)
         return None
 
-    def post_processing_movements(self):
-        self.history.add_tile_movements_to_current_step(self.sideway_moves)
-        self.history.add_tile_movements_to_current_step(self.downward_moves)
